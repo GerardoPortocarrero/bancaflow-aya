@@ -1,0 +1,53 @@
+{
+  "name": "bancaflow",
+  "version": "1.0.0",
+  "main": "dist/main/main.js",
+  "scripts": {
+    "start": "concurrently \"npm run tailwind:watch\" \"npm run tsc:watch\" \"npm run copy:html:watch\" \"wait-on dist/main/main.js && electron .\"",
+    "copy:html": "powershell -Command \"Copy-Item src/renderer/index.html dist/renderer/index.html\"",
+    "copy:html:watch": "powershell -Command \"while($true) { Copy-Item src/renderer/index.html dist/renderer/index.html; Start-Sleep -Seconds 2 }\"",
+    "tailwind:watch": "tailwindcss -i ./src/renderer/css/style.css -o ./dist/renderer/css/output.css --watch",
+    "tailwind:build": "tailwindcss -i ./src/renderer/css/style.css -o ./dist/renderer/css/output.css --minify",
+    "tsc:watch": "tsc -w",
+    "build": "npm run tailwind:build && tsc && electron-builder",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "build": {
+    "appId": "com.bancaflow.app",
+    "productName": "BancaFlow",
+    "win": {
+      "target": "portable",
+      "icon": "assets/icon.ico"
+    },
+    "directories": {
+      "output": "dist-app"
+    },
+    "files": [
+      "dist/**/*",
+      "src/renderer/index.html"
+    ]
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.3.1",
+    "autoprefixer": "^10.5.0",
+    "concurrently": "^10.0.3",
+    "electron": "^42.4.0",
+    "electron-builder": "^26.15.3",
+    "postcss": "^8.5.15",
+    "tailwindcss": "^4.3.1",
+    "ts-loader": "^9.6.0",
+    "typescript": "^6.0.3",
+    "wait-on": "^9.0.10"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.108.1",
+    "dotenv": "^17.4.2",
+    "googleapis": "^173.0.0",
+    "pdf-lib": "^1.17.1",
+    "sharp": "^0.35.1"
+  }
+}

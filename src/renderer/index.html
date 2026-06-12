@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BancaFlow</title>
+    <link rel="stylesheet" href="./css/output.css">
+</head>
+<body class="bg-fluent-bg font-sans text-gray-900 select-none overflow-hidden">
+    
+    <div class="flex h-screen">
+        <!-- Sidebar con efecto Mica -->
+        <aside class="w-64 bg-fluent-sidebar backdrop-blur-md border-r border-fluent-border flex flex-col p-4">
+            <div class="mb-8 pt-6">
+                <h1 class="text-xl font-bold text-fluent-accent">BancaFlow</h1>
+                <p class="text-xs text-gray-500">Gestión de Bancarización</p>
+            </div>
+            
+            <nav class="flex-1 space-y-2">
+                <a href="#" class="flex items-center p-2 rounded-lg bg-white/50 border border-white/20 shadow-sm text-sm font-medium">
+                    <span class="mr-3">📊</span> Dashboard
+                </a>
+                <a href="#" class="flex items-center p-2 rounded-lg hover:bg-white/30 text-sm font-medium transition-all">
+                    <span class="mr-3">➕</span> Nueva Solicitud
+                </a>
+                <a href="#" class="flex items-center p-2 rounded-lg hover:bg-white/30 text-sm font-medium transition-all">
+                    <span class="mr-3">🕒</span> Historial
+                </a>
+            </nav>
+            
+            <div class="pt-4 border-t border-fluent-border mt-auto">
+                <div class="flex items-center p-2">
+                    <div class="w-8 h-8 rounded-full bg-fluent-accent text-white flex items-center justify-center text-xs font-bold mr-3">
+                        JD
+                    </div>
+                    <div>
+                        <p class="text-xs font-semibold">Juan Doe</p>
+                        <p class="text-[10px] text-gray-500 italic">Administrador</p>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Contenido Principal -->
+        <main class="flex-1 flex flex-col overflow-hidden">
+            <header class="h-14 flex items-center justify-between px-8 border-b border-fluent-border">
+                <h2 class="text-sm font-semibold uppercase tracking-wider text-gray-500">Dashboard General</h2>
+                <div class="flex space-x-2">
+                    <button class="p-2 hover:bg-gray-200 rounded-full transition-colors">🔔</button>
+                    <button class="p-2 hover:bg-gray-200 rounded-full transition-colors">⚙️</button>
+                </div>
+            </header>
+
+            <section class="flex-1 overflow-y-auto p-8">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <!-- Tarjetas Estilo Fluent -->
+                    <div class="bg-white p-5 rounded-xl border border-fluent-border shadow-sm">
+                        <p class="text-xs text-gray-500 mb-1">Pendiente Revisión</p>
+                        <h3 class="text-2xl font-bold text-gray-800">12</h3>
+                    </div>
+                    <div class="bg-white p-5 rounded-xl border border-fluent-border shadow-sm">
+                        <p class="text-xs text-gray-500 mb-1">Por Bancarizar</p>
+                        <h3 class="text-2xl font-bold text-fluent-accent">05</h3>
+                    </div>
+                    <div class="bg-white p-5 rounded-xl border border-fluent-border shadow-sm">
+                        <p class="text-xs text-gray-500 mb-1">Monto Total Hoy</p>
+                        <h3 class="text-2xl font-bold text-green-600">S/ 4,250.00</h3>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl border border-fluent-border shadow-sm overflow-hidden">
+                    <div class="p-4 border-b border-fluent-border bg-gray-50/50 flex justify-between items-center">
+                        <h3 class="text-sm font-semibold">Solicitudes Recientes</h3>
+                        <button class="text-xs text-fluent-accent font-medium hover:underline">Ver todo</button>
+                    </div>
+                    <div class="p-8 text-center py-20">
+                        <div class="text-4xl mb-4">📂</div>
+                        <p class="text-gray-500 text-sm">No hay solicitudes pendientes en este momento.</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+</body>
+</html>
