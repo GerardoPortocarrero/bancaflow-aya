@@ -1,9 +1,43 @@
 @import "tailwindcss";
 
 @theme {
+  /* Windows 11 Fluent Palette */
   --color-fluent-bg: #f3f3f3;
   --color-fluent-sidebar: rgba(243, 243, 243, 0.7);
   --color-fluent-accent: #0078d4;
-  --color-fluent-border: rgba(0, 0, 0, 0.1);
-  --backdrop-blur-xs: 2px;
+  --color-fluent-accent-hover: #005a9e;
+  --color-fluent-border: rgba(0, 0, 0, 0.06);
+  --color-fluent-card: #ffffff;
+  
+  --backdrop-blur-mica: 20px;
+  --shadow-fluent: 0 2px 4px rgba(0,0,0,0.04);
+}
+
+@layer base {
+  body {
+    @apply text-slate-900 antialiased;
+    font-family: 'Segoe UI Variable Display', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  }
+}
+
+@layer components {
+  .mica-effect {
+    @apply backdrop-blur-mica bg-fluent-sidebar;
+  }
+  
+  .fluent-card {
+    @apply bg-fluent-card border border-fluent-border rounded-xl shadow-fluent transition-all duration-200;
+  }
+
+  .nav-link {
+    @apply flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer;
+  }
+
+  .nav-link-active {
+    @apply bg-white/60 shadow-sm border border-white/20 text-fluent-accent;
+  }
+
+  .nav-link-inactive {
+    @apply text-slate-600 hover:bg-white/30;
+  }
 }

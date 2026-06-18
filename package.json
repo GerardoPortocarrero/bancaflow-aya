@@ -47,6 +47,7 @@
     "@supabase/supabase-js": "^2.108.1",
     "dotenv": "^17.4.2",
     "googleapis": "^173.0.0",
+    "lucide": "^1.20.0",
     "pdf-lib": "^1.17.1",
     "sharp": "^0.35.1"
   }
