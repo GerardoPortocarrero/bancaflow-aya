@@ -6,20 +6,8 @@
     <title>BancaFlow</title>
     <link rel="stylesheet" href="./css/output.css">
 </head>
-<<<<<<< HEAD
 <body class="bg-fluent-bg select-none overflow-hidden">
     
-    <div class="flex h-screen bg-transparent">
-        <!-- Sidebar con efecto Mica -->
-        <aside class="w-64 mica-effect border-r border-fluent-border flex flex-col p-4 pt-10 drag-region">
-            <div class="mb-8 px-2 no-drag">
-                <h1 class="text-xl font-bold text-fluent-accent flex items-center">
-                    <span class="mr-2">💎</span> BancaFlow
-                </h1>
-                <p class="text-[11px] text-slate-300 uppercase tracking-widest font-bold mt-1">Gestión Financiera</p>
-            </div>
-            
-=======
     <!-- PANTALLA DE LOGIN (Dark Glassmorphism Premium) -->
     <div id="login-screen" class="fixed inset-0 z-50 flex items-center justify-center bg-transparent animate-in fade-in duration-700">
         <div class="max-w-md w-full p-8 text-center drag-region">
@@ -34,13 +22,13 @@
             <div class="fluent-card p-10 text-left no-drag">
                 <form id="login-form" class="space-y-6">
                     <div class="space-y-2">
-                        <label class="text-[12px] font-extrabold text-white uppercase tracking-widest px-1">Correo Electrónico</label>
-                        <input type="email" id="login-email" required class="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-fluent-accent focus:bg-black/50 transition-all shadow-inner" placeholder="usuario@empresa.com">
+                        <label class="fluent-label">Correo Electrónico</label>
+                        <input type="email" id="login-email" required class="fluent-input" placeholder="usuario@empresa.com">
                     </div>
                     
                     <div class="space-y-2">
-                        <label class="text-[12px] font-extrabold text-white uppercase tracking-widest px-1">Contraseña</label>
-                        <input type="password" id="login-password" required class="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-fluent-accent focus:bg-black/50 transition-all shadow-inner" placeholder="••••••••">
+                        <label class="fluent-label">Contraseña</label>
+                        <input type="password" id="login-password" required class="fluent-input" placeholder="••••••••">
                     </div>
 
                     <div id="login-error" class="hidden text-[11px] font-bold text-red-400 bg-red-950/40 p-3 rounded-lg border border-red-900/50 animate-in slide-in-from-top-2">
@@ -71,8 +59,6 @@
                     <p class="text-[10px] text-slate-300 uppercase tracking-widest font-bold mt-0.5">Finanzas</p>
                 </div>
             </div>
-            
->>>>>>> e685e94 (correccion de conexion a supabase url)
             <nav class="flex-1 space-y-1 no-drag">
                 <div data-target="view-dashboard" class="nav-link nav-link-active">
                     <i data-lucide="layout-dashboard" class="w-4 h-4 mr-3"></i> Dashboard
@@ -86,13 +72,13 @@
             </nav>
             
             <div class="pt-4 border-t border-fluent-border mt-auto no-drag">
-                <div class="flex items-center p-2 rounded-lg hover:bg-white/10 transition-colors cursor-pointer group">
-                    <div class="w-9 h-9 rounded-full bg-fluent-accent text-white flex items-center justify-center text-xs font-bold mr-3 shadow-md">
+                <div id="logout-btn" class="flex items-center p-2 rounded-lg hover:bg-white/10 transition-colors cursor-pointer group">
+                    <div id="user-initials" class="w-9 h-9 rounded-full bg-fluent-accent text-white flex items-center justify-center text-xs font-bold mr-3 shadow-md">
                         JD
                     </div>
                     <div class="flex-1 min-w-0">
-                        <p class="text-xs font-bold text-white truncate">Juan Doe</p>
-                        <p class="text-[10px] text-slate-300 font-medium italic">Administrador</p>
+                        <p id="user-name" class="text-xs font-bold text-white truncate">Juan Doe</p>
+                        <p id="user-role" class="text-[10px] text-slate-300 font-medium italic">Administrador</p>
                     </div>
                     <i data-lucide="log-out" class="w-3.5 h-3.5 text-slate-300 group-hover:text-red-400 transition-colors"></i>
                 </div>
@@ -149,39 +135,39 @@
             <section id="view-nueva-solicitud" class="flex-1 overflow-y-auto p-8 hidden animate-in fade-in duration-500">
                 <div class="max-w-2xl mx-auto">
                     <div class="fluent-card p-8">
-                        <h3 class="text-lg font-bold text-slate-800 mb-6 flex items-center">
+                        <h3 class="fluent-title">
                             <i data-lucide="file-plus" class="w-5 h-5 mr-2 text-fluent-accent"></i> 
                             Registrar Pago
                         </h3>
                         
-                        <form class="space-y-4">
-                            <div class="grid grid-cols-2 gap-4">
-                                <div class="space-y-1.5">
-                                    <label class="text-[11px] font-bold text-slate-500 uppercase px-1">Proveedor</label>
-                                    <input type="text" class="w-full px-3 py-2 bg-slate-50 border border-fluent-border rounded-lg text-sm focus:outline-none focus:border-fluent-accent transition-colors" placeholder="Nombre de la empresa">
+                        <form class="space-y-6">
+                            <div class="grid grid-cols-2 gap-6">
+                                <div class="space-y-2">
+                                    <label class="fluent-label">Proveedor</label>
+                                    <input type="text" class="fluent-input" placeholder="Nombre de la empresa">
                                 </div>
-                                <div class="space-y-1.5">
-                                    <label class="text-[11px] font-bold text-slate-500 uppercase px-1">Monto (Soles)</label>
-                                    <input type="number" id="input-monto" class="w-full px-3 py-2 bg-slate-50 border border-fluent-border rounded-lg text-sm focus:outline-none focus:border-fluent-accent transition-colors" placeholder="0.00">
+                                <div class="space-y-2">
+                                    <label class="fluent-label">Monto (Soles)</label>
+                                    <input type="number" id="input-monto" class="fluent-input" placeholder="0.00">
                                 </div>
                             </div>
 
-                            <div class="space-y-1.5">
-                                <label class="text-[11px] font-bold text-slate-500 uppercase px-1">Descripción del Servicio</label>
-                                <textarea class="w-full px-3 py-2 bg-slate-50 border border-fluent-border rounded-lg text-sm focus:outline-none focus:border-fluent-accent transition-colors h-24" placeholder="Detalles de la factura..."></textarea>
+                            <div class="space-y-2">
+                                <label class="fluent-label">Descripción del Servicio</label>
+                                <textarea class="fluent-input h-24 resize-none" placeholder="Detalles de la factura..."></textarea>
                             </div>
 
                             <!-- Alerta de Detracción (Oculta por defecto) -->
-                            <div id="alert-detraccion" class="hidden p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-start">
-                                <i data-lucide="bell" class="w-4 h-4 text-amber-600 mr-3 mt-0.5"></i>
+                            <div id="alert-detraccion" class="hidden fluent-alert-warning">
+                                <i data-lucide="bell" class="w-5 h-5 text-amber-500 mr-3 mt-0.5"></i>
                                 <div>
-                                    <p class="text-xs font-bold text-amber-800 uppercase">Sujeto a Detracción</p>
-                                    <p class="text-[11px] text-amber-700">Este monto supera los S/ 700.00. Se requiere sustento de depósito.</p>
+                                    <p class="text-xs font-black uppercase tracking-wider">Sujeto a Detracción</p>
+                                    <p class="text-xs mt-0.5 opacity-90">Este monto supera los S/ 700.00. Se requiere sustento de depósito.</p>
                                 </div>
                             </div>
 
                             <div class="pt-4">
-                                <button type="submit" class="w-full py-2.5 bg-fluent-accent hover:bg-fluent-accent-hover text-white rounded-lg text-sm font-bold shadow-md transition-all">
+                                <button type="submit" class="w-full py-3.5 bg-fluent-accent hover:bg-[#80d8ff] text-slate-950 rounded-xl text-sm font-black uppercase tracking-widest shadow-xl shadow-fluent-accent/10 transition-all transform active:scale-[0.97] flex items-center justify-center cursor-pointer">
                                     Enviar Solicitud
                                 </button>
                             </div>

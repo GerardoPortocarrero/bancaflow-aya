@@ -3,14 +3,14 @@
 @theme {
   /* Windows 11 Fluent Palette Dark Glassmorphism Premium */
   --color-fluent-bg: transparent;
-  --color-fluent-sidebar: rgba(15, 15, 15, 0.4);
+  --color-fluent-sidebar: rgba(18, 18, 18, 0.35);
   --color-fluent-accent: #60cdff; /* Celeste eléctrico Fluent de alto contraste */
   --color-fluent-accent-hover: #0078d4;
   --color-fluent-border: rgba(255, 255, 255, 0.08);
-  --color-fluent-card: rgba(30, 30, 30, 0.55);
+  --color-fluent-card: rgba(26, 26, 26, 0.5);
   
-  --backdrop-blur-mica: 40px;
-  --shadow-fluent: 0 12px 40px 0 rgba(0, 0, 0, 0.3);
+  --backdrop-blur-mica: 45px;
+  --shadow-fluent: 0 16px 48px 0 rgba(0, 0, 0, 0.45);
 }
 
 @layer base {
@@ -37,25 +37,29 @@
   }
   
   .glass-panel {
-    background: rgba(20, 20, 20, 0.6);
+    background: rgba(22, 22, 22, 0.65);
     backdrop-filter: blur(40px);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: var(--shadow-fluent);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    box-shadow: var(--shadow-fluent), inset 0 1px 0 0 rgba(255, 255, 255, 0.12);
   }
 
   .fluent-card {
-    background: var(--color-fluent-card);
+    background: linear-gradient(135deg, rgba(35, 35, 35, 0.55) 0%, rgba(20, 20, 20, 0.45) 100%);
     backdrop-filter: blur(40px);
-    border: 1px solid rgba(255, 255, 255, 0.07);
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 12px 32px 0 rgba(0, 0, 0, 0.35), 
+                inset 0 1px 0 0 rgba(255, 255, 255, 0.15),
+                inset 0 0 0 1px rgba(255, 255, 255, 0.03);
     @apply rounded-2xl transition-all duration-300;
   }
 
   .fluent-card:hover {
-    background: rgba(45, 45, 45, 0.65);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.35);
-    transform: translateY(-1px);
+    background: linear-gradient(135deg, rgba(45, 45, 45, 0.65) 0%, rgba(26, 26, 26, 0.55) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.13);
+    box-shadow: 0 16px 48px 0 rgba(0, 0, 0, 0.45), 
+                inset 0 1px 0 0 rgba(255, 255, 255, 0.2),
+                inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+    transform: translateY(-2px);
   }
 
   .nav-link {
@@ -71,4 +75,47 @@
   .nav-link-inactive {
     @apply text-slate-300 hover:bg-white/5 hover:text-white;
   }
+
+  /* Fluent Controls - Dark Glassmorphism Premium */
+  .fluent-input {
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 2px solid rgba(255, 255, 255, 0.35);
+    @apply w-full px-4 py-2.5 rounded-lg text-sm text-white transition-all;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
+  }
+
+  .fluent-input::placeholder {
+    color: rgba(255, 255, 255, 0.35);
+  }
+
+  .fluent-input:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-bottom-color: rgba(255, 255, 255, 0.55);
+  }
+
+  .fluent-input:focus {
+    background: rgba(0, 0, 0, 0.45);
+    border-color: rgba(255, 255, 255, 0.1);
+    border-bottom-color: var(--color-fluent-accent);
+    outline: none;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+  }
+
+  .fluent-label {
+    @apply text-[11px] font-bold text-slate-300 uppercase tracking-wider px-1 block;
+  }
+
+  .fluent-title {
+    @apply text-lg font-bold text-white mb-6 flex items-center;
+  }
+
+  .fluent-alert-warning {
+    background: rgba(245, 158, 11, 0.06);
+    border: 1px solid rgba(245, 158, 11, 0.18);
+    border-left: 4px solid #f59e0b;
+    backdrop-filter: blur(20px);
+    @apply p-4 rounded-xl flex items-start text-amber-200;
+  }
 }
+
