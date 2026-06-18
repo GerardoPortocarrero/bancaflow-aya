@@ -1,0 +1,53 @@
+.----------.
+| FIREBASE |
+'----------'
+
+Subir reglas de firestore
+>_ firebase deploy --only firestore:rules
+
+Subir indices para busqueda personalizada
+>_ firebase deploy --only firestore:indexes
+
+Subir proyecto a hosting
+>_ cd frontend
+>_ npm run build
+>_ firebase deploy --only hosting
+
+.-------------.
+| GESTION GIT |
+'-------------'
+
+Ver ramas:
+>_ git branch
+
+Cambiar a rama existente:
+_ git checkout <rama>
+
+Cambiar y crear rama:
+>_ git checkout -b <rama>
+
+Eliminar cambios actuales
+>_ git reset --hard HEAD
+
+.-------------.
+| GESTION NPM |
+'-------------'
+
+Iniciar proyecto react vite
+>_ npm create vite@latest frontend -- --template react-ts
+
+Ejecutar servidor
+>_ npm run dev
+
+Instalar paquetes:
+>_ npm install
+
+Parchear dependencias:
+>_ npm audit fix
+
+.-------.
+| OTROS |
+'-------'
+
+Eliminar carpeta
+>_ rmdir /s /q <carpeta>

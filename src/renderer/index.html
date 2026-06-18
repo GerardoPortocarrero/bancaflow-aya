@@ -8,17 +8,17 @@
 </head>
 <body class="bg-fluent-bg select-none overflow-hidden">
     
-    <div class="flex h-screen">
+    <div class="flex h-screen bg-transparent">
         <!-- Sidebar con efecto Mica -->
-        <aside class="w-64 mica-effect border-r border-fluent-border flex flex-col p-4">
-            <div class="mb-8 pt-6 px-2">
+        <aside class="w-64 mica-effect border-r border-fluent-border flex flex-col p-4 pt-10 drag-region">
+            <div class="mb-8 px-2 no-drag">
                 <h1 class="text-xl font-bold text-fluent-accent flex items-center">
                     <span class="mr-2">💎</span> BancaFlow
                 </h1>
-                <p class="text-[11px] text-slate-500 uppercase tracking-widest font-semibold mt-1">Gestión Financiera</p>
+                <p class="text-[11px] text-slate-300 uppercase tracking-widest font-bold mt-1">Gestión Financiera</p>
             </div>
             
-            <nav class="flex-1 space-y-1">
+            <nav class="flex-1 space-y-1 no-drag">
                 <div data-target="view-dashboard" class="nav-link nav-link-active">
                     <i data-lucide="layout-dashboard" class="w-4 h-4 mr-3"></i> Dashboard
                 </div>
@@ -30,29 +30,30 @@
                 </div>
             </nav>
             
-            <div class="pt-4 border-t border-fluent-border mt-auto">
-                <div class="flex items-center p-2 rounded-lg hover:bg-white/30 transition-colors cursor-pointer group">
+            <div class="pt-4 border-t border-fluent-border mt-auto no-drag">
+                <div class="flex items-center p-2 rounded-lg hover:bg-white/10 transition-colors cursor-pointer group">
                     <div class="w-9 h-9 rounded-full bg-fluent-accent text-white flex items-center justify-center text-xs font-bold mr-3 shadow-md">
                         JD
                     </div>
                     <div class="flex-1 min-w-0">
-                        <p class="text-xs font-semibold truncate">Juan Doe</p>
-                        <p class="text-[10px] text-slate-500 italic">Administrador</p>
+                        <p class="text-xs font-bold text-white truncate">Juan Doe</p>
+                        <p class="text-[10px] text-slate-300 font-medium italic">Administrador</p>
                     </div>
-                    <i data-lucide="log-out" class="w-3.5 h-3.5 text-slate-400 group-hover:text-red-500 transition-colors"></i>
+                    <i data-lucide="log-out" class="w-3.5 h-3.5 text-slate-300 group-hover:text-red-400 transition-colors"></i>
                 </div>
             </div>
         </aside>
 
         <!-- Contenido Principal -->
-        <main class="flex-1 flex flex-col overflow-hidden bg-white/20">
-            <header class="h-14 flex items-center justify-between px-8 border-b border-fluent-border bg-white/40 backdrop-blur-sm">
-                <h2 id="current-view-title" class="text-xs font-bold uppercase tracking-widest text-slate-500">Dashboard General</h2>
-                <div class="flex items-center space-x-1">
-                    <button class="p-2 hover:bg-black/5 rounded-md transition-colors text-slate-600">
+        <main class="flex-1 flex flex-col overflow-hidden bg-transparent">
+            <!-- Header con espacio reservado para los botones de control nativos de Windows -->
+            <header class="h-14 min-h-[56px] flex items-center justify-between pl-8 pr-[140px] border-b border-fluent-border bg-black/10 backdrop-blur-xl drag-region">
+                <h2 id="current-view-title" class="text-xs font-bold uppercase tracking-widest text-slate-200 no-drag">Dashboard General</h2>
+                <div class="flex items-center space-x-1 no-drag">
+                    <button class="p-2 hover:bg-white/5 rounded-md transition-colors text-slate-300">
                         <i data-lucide="bell" class="w-4 h-4"></i>
                     </button>
-                    <button class="p-2 hover:bg-black/5 rounded-md transition-colors text-slate-600">
+                    <button class="p-2 hover:bg-white/5 rounded-md transition-colors text-slate-300">
                         <i data-lucide="settings" class="w-4 h-4"></i>
                     </button>
                 </div>
@@ -62,29 +63,29 @@
             <section id="view-dashboard" class="flex-1 overflow-y-auto p-8 animate-in fade-in duration-500">
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                     <div class="fluent-card p-5">
-                        <p class="text-[11px] font-bold text-slate-500 uppercase mb-1">Pendiente Revisión</p>
-                        <h3 class="text-3xl font-bold text-slate-800">12</h3>
+                        <p class="text-[11px] font-bold text-slate-300 uppercase mb-1">Pendiente Revisión</p>
+                        <h3 class="text-3xl font-extrabold text-white">12</h3>
                     </div>
                     <div class="fluent-card p-5 border-l-4 border-l-fluent-accent">
-                        <p class="text-[11px] font-bold text-slate-500 uppercase mb-1">Por Bancarizar</p>
-                        <h3 class="text-3xl font-bold text-fluent-accent">05</h3>
+                        <p class="text-[11px] font-bold text-slate-300 uppercase mb-1">Por Bancarizar</p>
+                        <h3 class="text-3xl font-extrabold text-fluent-accent">05</h3>
                     </div>
                     <div class="fluent-card p-5">
-                        <p class="text-[11px] font-bold text-slate-500 uppercase mb-1">Monto Total Hoy</p>
-                        <h3 class="text-3xl font-bold text-emerald-600">S/ 4,250.00</h3>
+                        <p class="text-[11px] font-bold text-slate-300 uppercase mb-1">Monto Total Hoy</p>
+                        <h3 class="text-3xl font-extrabold text-emerald-400">S/ 4,250.00</h3>
                     </div>
                 </div>
 
                 <div class="fluent-card overflow-hidden">
-                    <div class="px-6 py-4 border-b border-fluent-border bg-slate-50/50 flex justify-between items-center">
-                        <h3 class="text-sm font-bold text-slate-700">Solicitudes Recientes</h3>
-                        <button class="text-[11px] text-fluent-accent font-bold uppercase hover:underline">Ver todo</button>
+                    <div class="px-6 py-4 border-b border-fluent-border bg-black/10 flex justify-between items-center">
+                        <h3 class="text-sm font-bold text-slate-200">Solicitudes Recientes</h3>
+                        <button class="text-[11px] text-fluent-accent font-bold uppercase hover:underline no-drag">Ver todo</button>
                     </div>
                     <div class="p-12 text-center">
-                        <div class="bg-slate-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <i data-lucide="layout-dashboard" class="w-8 h-8 text-slate-300"></i>
+                        <div class="bg-white/5 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 border border-white/10">
+                            <i data-lucide="layout-dashboard" class="w-8 h-8 text-slate-400"></i>
                         </div>
-                        <p class="text-slate-500 text-sm font-medium">No hay solicitudes pendientes en este momento.</p>
+                        <p class="text-slate-200 text-sm font-semibold">No hay solicitudes pendientes en este momento.</p>
                     </div>
                 </div>
             </section>

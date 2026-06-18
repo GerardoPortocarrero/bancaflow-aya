@@ -9,16 +9,18 @@ function createWindow() {
     minHeight: 600,
     titleBarStyle: 'hidden', // Estilo Fluent para barra de título
     titleBarOverlay: {
-      color: '#f3f3f3',
-      symbolColor: '#000000',
-      height: 35
+      color: 'rgba(0, 0, 0, 0)', // Totalmente transparente
+      symbolColor: '#ffffff', // Controles blancos para alto contraste sobre cristal oscuro
+      height: 40 // Altura estándar para botones de Windows 11
     },
+    transparent: true,
+    vibrancy: 'sidebar',
+    backgroundMaterial: 'acrylic',
     webPreferences: {
       preload: path.join(__dirname, '../preload/preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
     },
-    backgroundColor: '#f3f3f3', // Color base Fluent
     show: false,
   });
 
