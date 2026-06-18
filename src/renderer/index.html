@@ -6,6 +6,7 @@
     <title>BancaFlow</title>
     <link rel="stylesheet" href="./css/output.css">
 </head>
+<<<<<<< HEAD
 <body class="bg-fluent-bg select-none overflow-hidden">
     
     <div class="flex h-screen bg-transparent">
@@ -18,6 +19,60 @@
                 <p class="text-[11px] text-slate-300 uppercase tracking-widest font-bold mt-1">Gestión Financiera</p>
             </div>
             
+=======
+    <!-- PANTALLA DE LOGIN (Dark Glassmorphism Premium) -->
+    <div id="login-screen" class="fixed inset-0 z-50 flex items-center justify-center bg-transparent animate-in fade-in duration-700">
+        <div class="max-w-md w-full p-8 text-center drag-region">
+            <div class="mb-8 no-drag">
+                <div class="w-20 h-20 bg-white/10 rounded-2xl shadow-2xl flex items-center justify-center mx-auto mb-4 border border-white/10 backdrop-blur-xl overflow-hidden p-3">
+                    <img src="../../assets/logo.png" alt="BancaFlow Logo" class="w-full h-full object-contain filter drop-shadow-lg">
+                </div>
+                <h1 class="text-3xl font-extrabold text-white tracking-tight">BancaFlow</h1>
+                <p class="text-sm text-slate-200 font-bold uppercase tracking-wider mt-1">Gestión Centralizada de Pagos</p>
+            </div>
+
+            <div class="fluent-card p-10 text-left no-drag">
+                <form id="login-form" class="space-y-6">
+                    <div class="space-y-2">
+                        <label class="text-[12px] font-extrabold text-white uppercase tracking-widest px-1">Correo Electrónico</label>
+                        <input type="email" id="login-email" required class="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-fluent-accent focus:bg-black/50 transition-all shadow-inner" placeholder="usuario@empresa.com">
+                    </div>
+                    
+                    <div class="space-y-2">
+                        <label class="text-[12px] font-extrabold text-white uppercase tracking-widest px-1">Contraseña</label>
+                        <input type="password" id="login-password" required class="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-fluent-accent focus:bg-black/50 transition-all shadow-inner" placeholder="••••••••">
+                    </div>
+
+                    <div id="login-error" class="hidden text-[11px] font-bold text-red-400 bg-red-950/40 p-3 rounded-lg border border-red-900/50 animate-in slide-in-from-top-2">
+                        <!-- Mensaje de error dinámico -->
+                    </div>
+
+                    <button type="submit" id="login-btn" class="w-full py-3.5 bg-fluent-accent hover:bg-[#80d8ff] text-slate-950 rounded-xl text-sm font-black uppercase tracking-widest shadow-xl shadow-fluent-accent/10 transition-all transform active:scale-[0.97] flex items-center justify-center cursor-pointer mt-4">
+                        <span id="login-btn-text">Iniciar Sesión</span>
+                        <div id="login-btn-spinner" class="hidden ml-2 w-4 h-4 border-2 border-slate-950/30 border-t-slate-950 rounded-full animate-spin"></div>
+                    </button>
+                </form>
+            </div>
+            
+            <p class="mt-10 text-[11px] text-slate-300 font-extrabold uppercase tracking-[0.2em] no-drag">v1.0.0 Beta • Infraestructura $0</p>
+        </div>
+    </div>
+
+    <!-- CONTENEDOR PRINCIPAL DE LA APP (Oculto por defecto) -->
+    <div id="app-container" class="hidden flex h-screen bg-transparent animate-in fade-in zoom-in-95 duration-500">
+        <!-- Sidebar con efecto Mica -->
+        <aside class="w-64 mica-effect border-r border-fluent-border flex flex-col p-4 pt-10 drag-region">
+            <div class="mb-8 px-2 no-drag flex items-center">
+                <div class="w-10 h-10 bg-white/10 rounded-lg p-1.5 mr-3 border border-white/10 backdrop-blur-md">
+                    <img src="../../assets/logo.png" alt="Logo" class="w-full h-full object-contain">
+                </div>
+                <div>
+                    <h1 class="text-lg font-black text-white leading-none">BancaFlow</h1>
+                    <p class="text-[10px] text-slate-300 uppercase tracking-widest font-bold mt-0.5">Finanzas</p>
+                </div>
+            </div>
+            
+>>>>>>> e685e94 (correccion de conexion a supabase url)
             <nav class="flex-1 space-y-1 no-drag">
                 <div data-target="view-dashboard" class="nav-link nav-link-active">
                     <i data-lucide="layout-dashboard" class="w-4 h-4 mr-3"></i> Dashboard

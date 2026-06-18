@@ -13,6 +13,7 @@ out/
 # Variables de entorno (SEGURIDAD)
 .env
 *.env
+datos.txt
 
 # Logs
 npm-debug.log*
