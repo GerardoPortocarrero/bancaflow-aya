@@ -117,5 +117,78 @@
     backdrop-filter: blur(20px);
     @apply p-4 rounded-xl flex items-start text-amber-200;
   }
+
+  .fluent-alert-success {
+    background: rgba(16, 185, 129, 0.06);
+    border: 1px solid rgba(16, 185, 129, 0.18);
+    border-left: 4px solid #10b981;
+    backdrop-filter: blur(20px);
+    @apply p-4 rounded-xl flex items-start text-emerald-200;
+  }
+
+  .fluent-alert-error {
+    background: rgba(239, 68, 68, 0.06);
+    border: 1px solid rgba(239, 68, 68, 0.18);
+    border-left: 4px solid #ef4444;
+    backdrop-filter: blur(20px);
+    @apply p-4 rounded-xl flex items-start text-red-200;
+  }
+
+  .fluent-dropzone {
+    background: rgba(0, 0, 0, 0.15);
+    border: 2px dashed rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(20px);
+    @apply rounded-xl p-8 text-center cursor-pointer transition-all duration-300;
+  }
+
+  .fluent-dropzone:hover {
+    background: rgba(255, 255, 255, 0.03);
+    border-color: rgba(255, 255, 255, 0.25);
+  }
+
+  .fluent-dropzone-active {
+    background: rgba(96, 205, 255, 0.05) !important;
+    border-color: var(--color-fluent-accent) !important;
+    box-shadow: 0 0 24px rgba(96, 205, 255, 0.08), inset 0 0 24px rgba(96, 205, 255, 0.03);
+  }
+
+  .fluent-file-preview {
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    @apply rounded-xl p-4 flex items-center justify-between transition-all duration-300;
+  }
+
+  .fluent-progress-bar {
+    @apply h-1 rounded-full overflow-hidden;
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  .fluent-progress-bar-fill {
+    @apply h-full rounded-full transition-all duration-500 ease-out;
+    background: linear-gradient(90deg, var(--color-fluent-accent), #80d8ff);
+    box-shadow: 0 0 12px rgba(96, 205, 255, 0.3);
+  }
+
+  .fluent-btn-primary {
+    @apply w-full py-3.5 rounded-xl text-sm font-black uppercase tracking-widest transition-all transform cursor-pointer flex items-center justify-center;
+    background: var(--color-fluent-accent);
+    color: #0a0a0a;
+    box-shadow: 0 8px 24px rgba(96, 205, 255, 0.1);
+  }
+
+  .fluent-btn-primary:hover {
+    background: #80d8ff;
+    box-shadow: 0 12px 32px rgba(96, 205, 255, 0.15);
+  }
+
+  .fluent-btn-primary:active {
+    transform: scale(0.97);
+  }
+
+  .fluent-btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
 }
 

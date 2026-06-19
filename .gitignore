@@ -15,6 +15,7 @@ out/
 *.env
 datos.txt
 "Cancelación 02.06.2026.xlsx"
+credenciales-googlecloud.json
 
 # Logs
 npm-debug.log*
