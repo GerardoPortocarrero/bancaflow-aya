@@ -14,6 +14,8 @@ interface IElectronAPI {
     obtenerSesion: () => Promise<{ session: any }>;
     crearUsuario: (datos: any) => Promise<{ success: boolean; user?: any; error?: string }>;
     listarUsuarios: () => Promise<{ success: boolean; usuarios?: any[]; error?: string }>;
+    actualizarUsuario: (id: string, nombre: string, apellido: string, rol: string) => Promise<{ success: boolean; error?: string }>;
+    eliminarUsuario: (id: string) => Promise<{ success: boolean; error?: string }>;
   };
   drive: {
     testConnection: () => Promise<{ success: boolean; folder?: { id: string; name: string }; error?: string }>;
@@ -21,7 +23,7 @@ interface IElectronAPI {
   };
   db: {
     listarBancos: () => Promise<{ success: boolean; bancos?: any[]; error?: string }>;
-    crearBanco: (nombre: string) => Promise<{ success: boolean; banco?: any; error?: string }>;
+    crearBanco: (nombre: string, moneda: string) => Promise<{ success: boolean; banco?: any; error?: string }>;
     listarSedes: () => Promise<{ success: boolean; sedes?: any[]; error?: string }>;
     crearSede: (nombre: string) => Promise<{ success: boolean; sede?: any; error?: string }>;
     listarProveedores: () => Promise<{ success: boolean; proveedores?: any[]; error?: string }>;
@@ -31,6 +33,14 @@ interface IElectronAPI {
     observarSolicitud: (id: string, motivo: string) => Promise<{ success: boolean; solicitud?: any; error?: string }>;
     bancarizarSolicitud: (id: string, evidencias: any[]) => Promise<{ success: boolean; solicitud?: any; error?: string }>;
     actualizarSolicitud: (datos: any) => Promise<{ success: boolean; solicitud?: any; error?: string }>;
+    actualizarBanco: (id: string, nombre: string, moneda: string) => Promise<{ success: boolean; banco?: any; error?: string }>;
+    eliminarBanco: (id: string) => Promise<{ success: boolean; error?: string }>;
+    actualizarSede: (id: string, nombre: string) => Promise<{ success: boolean; sede?: any; error?: string }>;
+    eliminarSede: (id: string) => Promise<{ success: boolean; error?: string }>;
+    actualizarProveedor: (id: string, datos: any) => Promise<{ success: boolean; proveedor?: any; error?: string }>;
+    eliminarProveedor: (id: string) => Promise<{ success: boolean; error?: string }>;
+    actualizarUsuario: (id: string, nombre: string, apellido: string, rol: string) => Promise<{ success: boolean; error?: string }>;
+    eliminarUsuario: (id: string) => Promise<{ success: boolean; error?: string }>;
   };
 }
 
@@ -497,25 +507,77 @@ async function cargarBancarizados() {
 }
 
 // --- PROVEEDORES ---
-async function cargarProveedores() {
-  const res = await window.electronAPI.db.listarProveedores();
+async function getBancoMap(): Promise<Map<string, any>> {
+  const m = new Map();
+  const res = await window.electronAPI.db.listarBancos();
+  if (res.success) (res.bancos || []).forEach((b: any) => m.set(b.id, b));
+  return m;
+}
+
+async function getSedeMap(): Promise<Map<string, any>> {
+  const m = new Map();
+  const res = await window.electronAPI.db.listarSedes();
+  if (res.success) (res.sedes || []).forEach((s: any) => m.set(s.id, s));
+  return m;
+}
+
+async function cargarProveedoresSelect(res?: any) {
+  if (!res) res = await window.electronAPI.db.listarProveedores();
   const select = document.getElementById('input-proveedor') as HTMLSelectElement;
   if (select && res.success) {
     select.innerHTML = '<option value="" disabled selected>Seleccione un proveedor...</option>' +
       (res.proveedores || []).map((p: any) => `<option value="${p.id}">${p.nombre_razon_social}</option>`).join('');
   }
+}
+
+async function cargarProveedores() {
+  const [res, bancoMap, sedeMap] = await Promise.all([
+    window.electronAPI.db.listarProveedores(),
+    getBancoMap(),
+    getSedeMap(),
+  ]);
+  await cargarProveedoresSelect(res);
   const tbody = document.getElementById('table-body-proveedores');
   if (tbody && res.success) {
-    tbody.innerHTML = (res.proveedores || []).map((p: any) => `
-      <tr class="hover:bg-white/5 transition-colors">
+    tbody.innerHTML = (res.proveedores || []).map((p: any) => {
+      const banco = bancoMap.get(p.banco_id);
+      const sede = sedeMap.get(p.sede_id);
+      return `<tr class="hover:bg-white/5 transition-colors">
         <td class="px-6 py-4 font-bold text-white">${p.nombre_razon_social}</td>
         <td class="px-6 py-4 text-slate-400">${p.correo || '-'}</td>
-        <td class="px-6 py-4">${p.bancos?.nombre || '-'}</td>
+        <td class="px-6 py-4">${banco ? `${banco.nombre} — ${banco.moneda}` : '-'}</td>
         <td class="px-6 py-4">${p.numero_cuenta || '-'}</td>
-        <td class="px-6 py-4">${p.sedes?.nombre || '-'}</td>
-        <td class="px-6 py-4 text-right">${p.cci || '-'}</td>
-      </tr>
-    `).join('');
+        <td class="px-6 py-4">${sede ? sede.nombre : '-'}</td>
+        <td class="px-6 py-4">${p.cci || '-'}</td>
+        <td class="px-6 py-4 text-right space-x-2">
+          <button class="btn-editar-proveedor text-[10px] uppercase font-bold text-fluent-accent hover:underline" data-id="${p.id}">Editar</button>
+          <button class="btn-eliminar-proveedor text-[10px] uppercase font-bold text-red-400 hover:underline" data-id="${p.id}">Eliminar</button>
+        </td>
+      </tr>`;
+    }).join('');
+    tbody.querySelectorAll('.btn-editar-proveedor').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-id');
+        const p = (res.proveedores || []).find((x: any) => x.id === id);
+        if (!p) return;
+        (document.getElementById('prov-nombre') as HTMLInputElement).value = p.nombre_razon_social || '';
+        (document.getElementById('prov-correo') as HTMLInputElement).value = p.correo || '';
+        (document.getElementById('prov-banco-id') as HTMLSelectElement).value = p.banco_id || '';
+        (document.getElementById('prov-cuenta') as HTMLInputElement).value = p.numero_cuenta || '';
+        (document.getElementById('prov-sede-id') as HTMLSelectElement).value = p.sede_id || '';
+        (document.getElementById('prov-cci') as HTMLInputElement).value = p.cci || '';
+        (document.getElementById('form-proveedor') as HTMLFormElement).setAttribute('data-editing', id || '');
+        openModal('modal-proveedor');
+      });
+    });
+    tbody.querySelectorAll('.btn-eliminar-proveedor').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = btn.getAttribute('data-id');
+        if (!id || !confirm('¿Eliminar este proveedor?')) return;
+        const r = await window.electronAPI.db.eliminarProveedor(id);
+        if (r.success) { await cargarProveedores(); } else { alert('Error: ' + r.error); }
+      });
+    });
   }
 }
 
@@ -527,14 +589,40 @@ async function cargarBancos() {
     const sel = document.getElementById(id) as HTMLSelectElement;
     if (sel && res.success) {
       sel.innerHTML = '<option value="">Seleccione...</option>' +
-        (res.bancos || []).map((b: any) => `<option value="${b.id}">${b.nombre}</option>`).join('');
+        (res.bancos || []).map((b: any) => `<option value="${b.id}">${b.nombre} — ${b.moneda}</option>`).join('');
     }
   });
   const tbody = document.getElementById('table-body-bancos');
   if (tbody && res.success) {
     tbody.innerHTML = (res.bancos || []).map((b: any) =>
-      `<tr class="hover:bg-white/5 transition-colors"><td class="px-6 py-4 font-bold text-white">${b.nombre}</td></tr>`
+      `<tr class="hover:bg-white/5 transition-colors">
+        <td class="px-6 py-4 font-bold text-white">${b.nombre}</td>
+        <td class="px-6 py-4">${b.moneda || 'Soles'}</td>
+        <td class="px-6 py-4 text-right space-x-2">
+          <button class="btn-editar-banco text-[10px] uppercase font-bold text-fluent-accent hover:underline" data-id="${b.id}" data-nombre="${b.nombre}" data-moneda="${b.moneda || 'Soles'}">Editar</button>
+          <button class="btn-eliminar-banco text-[10px] uppercase font-bold text-red-400 hover:underline" data-id="${b.id}">Eliminar</button>
+        </td>
+      </tr>`
     ).join('');
+    tbody.querySelectorAll('.btn-editar-banco').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-id');
+        const nombre = btn.getAttribute('data-nombre');
+        const moneda = btn.getAttribute('data-moneda');
+        (document.getElementById('banco-nombre') as HTMLInputElement).value = nombre || '';
+        (document.getElementById('banco-moneda') as HTMLSelectElement).value = moneda || 'Soles';
+        (document.getElementById('form-banco') as HTMLFormElement).setAttribute('data-editing', id || '');
+        openModal('modal-banco');
+      });
+    });
+    tbody.querySelectorAll('.btn-eliminar-banco').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = btn.getAttribute('data-id');
+        if (!id || !confirm('¿Eliminar este banco?')) return;
+        const res = await window.electronAPI.db.eliminarBanco(id);
+        if (res.success) { await cargarBancos(); } else { alert('Error: ' + res.error); }
+      });
+    });
   }
 }
 
@@ -552,8 +640,31 @@ async function cargarSedes() {
   const tbody = document.getElementById('table-body-sedes');
   if (tbody && res.success) {
     tbody.innerHTML = (res.sedes || []).map((s: any) =>
-      `<tr class="hover:bg-white/5 transition-colors"><td class="px-6 py-4 font-bold text-white">${s.nombre}</td></tr>`
+      `<tr class="hover:bg-white/5 transition-colors">
+        <td class="px-6 py-4 font-bold text-white">${s.nombre}</td>
+        <td class="px-6 py-4 text-right space-x-2">
+          <button class="btn-editar-sede text-[10px] uppercase font-bold text-fluent-accent hover:underline" data-id="${s.id}" data-nombre="${s.nombre}">Editar</button>
+          <button class="btn-eliminar-sede text-[10px] uppercase font-bold text-red-400 hover:underline" data-id="${s.id}">Eliminar</button>
+        </td>
+      </tr>`
     ).join('');
+    tbody.querySelectorAll('.btn-editar-sede').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-id');
+        const nombre = btn.getAttribute('data-nombre');
+        (document.getElementById('sede-nombre') as HTMLInputElement).value = nombre || '';
+        (document.getElementById('form-sede') as HTMLFormElement).setAttribute('data-editing', id || '');
+        openModal('modal-sede');
+      });
+    });
+    tbody.querySelectorAll('.btn-eliminar-sede').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = btn.getAttribute('data-id');
+        if (!id || !confirm('¿Eliminar esta sede?')) return;
+        const res = await window.electronAPI.db.eliminarSede(id);
+        if (res.success) { await cargarSedes(); } else { alert('Error: ' + res.error); }
+      });
+    });
   }
 }
 
@@ -568,8 +679,37 @@ async function cargarUsuarios() {
         <td class="px-6 py-4 text-slate-400">${u.email}</td>
         <td class="px-6 py-4"><span class="px-2 py-1 bg-white/10 rounded text-[10px] font-bold tracking-wider">${u.rol}</span></td>
         <td class="px-6 py-4">${new Date(u.created_at).toLocaleDateString()}</td>
+        <td class="px-6 py-4 text-right space-x-2">
+          <button class="btn-editar-usuario text-[10px] uppercase font-bold text-fluent-accent hover:underline" data-id="${u.id}" data-nombre="${u.nombre}" data-apellido="${u.apellido}" data-rol="${u.rol}">Editar</button>
+          <button class="btn-eliminar-usuario text-[10px] uppercase font-bold text-red-400 hover:underline" data-id="${u.id}">Eliminar</button>
+        </td>
       </tr>
     `).join('');
+    tbody.querySelectorAll('.btn-editar-usuario').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-id');
+        const nombre = btn.getAttribute('data-nombre');
+        const apellido = btn.getAttribute('data-apellido');
+        const rol = btn.getAttribute('data-rol');
+        (document.getElementById('usr-nombre') as HTMLInputElement).value = nombre || '';
+        (document.getElementById('usr-apellido') as HTMLInputElement).value = apellido || '';
+        (document.getElementById('usr-correo') as HTMLInputElement).value = '';
+        (document.getElementById('usr-correo') as HTMLInputElement).disabled = true;
+        (document.getElementById('usr-contrasena') as HTMLInputElement).value = '';
+        (document.getElementById('usr-contrasena') as HTMLInputElement).disabled = true;
+        (document.getElementById('usr-rol') as HTMLSelectElement).value = rol || 'RRHH';
+        (document.getElementById('form-usuario') as HTMLFormElement).setAttribute('data-editing', id || '');
+        openModal('modal-usuario');
+      });
+    });
+    tbody.querySelectorAll('.btn-eliminar-usuario').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = btn.getAttribute('data-id');
+        if (!id || !confirm('¿Eliminar este usuario? Esta acción no se puede deshacer.')) return;
+        const r = await window.electronAPI.auth.eliminarUsuario(id);
+        if (r.success) { await cargarUsuarios(); } else { alert('Error: ' + r.error); }
+      });
+    });
   }
 }
 
@@ -760,10 +900,15 @@ function setupEventListeners() {
       cci: (document.getElementById('prov-cci') as HTMLInputElement).value.trim() || null,
     };
     try {
-      const res = await window.electronAPI.db.crearProveedor(datos);
+      const form = document.getElementById('form-proveedor') as HTMLFormElement;
+      const editing = form.getAttribute('data-editing');
+      const res = editing
+        ? await window.electronAPI.db.actualizarProveedor(editing, datos)
+        : await window.electronAPI.db.crearProveedor(datos);
       if (res.success) {
         closeModal('modal-proveedor');
-        (document.getElementById('form-proveedor') as HTMLFormElement).reset();
+        form.reset();
+        form.removeAttribute('data-editing');
         await cargarProveedores();
       } else { alert('Error: ' + res.error); }
     } catch (err: any) { alert('Error: ' + err.message); }
@@ -775,12 +920,18 @@ function setupEventListeners() {
   // Form Banco
   document.getElementById('form-banco')?.addEventListener('submit', async (e) => {
     e.preventDefault();
+    const form = document.getElementById('form-banco') as HTMLFormElement;
+    const editing = form.getAttribute('data-editing');
     const nombre = (document.getElementById('banco-nombre') as HTMLInputElement).value.trim();
+    const moneda = (document.getElementById('banco-moneda') as HTMLSelectElement).value;
     if (!nombre) return;
-    const res = await window.electronAPI.db.crearBanco(nombre);
+    const res = editing
+      ? await window.electronAPI.db.actualizarBanco(editing, nombre, moneda)
+      : await window.electronAPI.db.crearBanco(nombre, moneda);
     if (res.success) {
       closeModal('modal-banco');
-      (document.getElementById('form-banco') as HTMLFormElement).reset();
+      form.reset();
+      form.removeAttribute('data-editing');
       await Promise.all([cargarBancos(), cargarProveedores()]);
     } else { alert('Error: ' + res.error); }
   });
@@ -790,12 +941,17 @@ function setupEventListeners() {
   // Form Sede
   document.getElementById('form-sede')?.addEventListener('submit', async (e) => {
     e.preventDefault();
+    const form = document.getElementById('form-sede') as HTMLFormElement;
+    const editing = form.getAttribute('data-editing');
     const nombre = (document.getElementById('sede-nombre') as HTMLInputElement).value.trim();
     if (!nombre) return;
-    const res = await window.electronAPI.db.crearSede(nombre);
+    const res = editing
+      ? await window.electronAPI.db.actualizarSede(editing, nombre)
+      : await window.electronAPI.db.crearSede(nombre);
     if (res.success) {
       closeModal('modal-sede');
-      (document.getElementById('form-sede') as HTMLFormElement).reset();
+      form.reset();
+      form.removeAttribute('data-editing');
       await Promise.all([cargarSedes(), cargarProveedores()]);
     } else { alert('Error: ' + res.error); }
   });
@@ -815,10 +971,17 @@ function setupEventListeners() {
       rol: (document.getElementById('usr-rol') as HTMLSelectElement).value,
     };
     try {
-      const res = await window.electronAPI.auth.crearUsuario(datos);
+      const form = document.getElementById('form-usuario') as HTMLFormElement;
+      const editing = form.getAttribute('data-editing');
+      const res = editing
+        ? await window.electronAPI.auth.actualizarUsuario(editing, datos.nombre, datos.apellido, datos.rol)
+        : await window.electronAPI.auth.crearUsuario(datos);
       if (res.success) {
         closeModal('modal-usuario');
-        (document.getElementById('form-usuario') as HTMLFormElement).reset();
+        form.reset();
+        form.removeAttribute('data-editing');
+        (document.getElementById('usr-correo') as HTMLInputElement).disabled = false;
+        (document.getElementById('usr-contrasena') as HTMLInputElement).disabled = false;
         await cargarUsuarios();
       } else { alert('Error: ' + res.error); }
     } catch (err: any) { alert('Error: ' + err.message); }

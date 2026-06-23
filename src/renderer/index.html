@@ -263,7 +263,8 @@
                                     <th class="px-6 py-4">Banco</th>
                                     <th class="px-6 py-4">Cuenta</th>
                                     <th class="px-6 py-4">Sede</th>
-                                    <th class="px-6 py-4 text-right">CCI</th>
+                                    <th class="px-6 py-4">CCI</th>
+                                    <th class="px-6 py-4 text-right">Acción</th>
                                 </tr>
                             </thead>
                             <tbody id="table-body-proveedores" class="divide-y divide-white/5"></tbody>
@@ -284,7 +285,7 @@
                     <div class="flex-1 overflow-auto p-0">
                         <table class="w-full text-left text-sm text-slate-300">
                             <thead class="text-xs uppercase bg-black/20 text-slate-400 font-bold tracking-wider sticky top-0 backdrop-blur-md">
-                                <tr><th class="px-6 py-4">Nombre</th></tr>
+                                <tr><th class="px-6 py-4">Nombre</th><th class="px-6 py-4">Moneda</th><th class="px-6 py-4 text-right">Acción</th></tr>
                             </thead>
                             <tbody id="table-body-bancos" class="divide-y divide-white/5"></tbody>
                         </table>
@@ -304,7 +305,7 @@
                     <div class="flex-1 overflow-auto p-0">
                         <table class="w-full text-left text-sm text-slate-300">
                             <thead class="text-xs uppercase bg-black/20 text-slate-400 font-bold tracking-wider sticky top-0 backdrop-blur-md">
-                                <tr><th class="px-6 py-4">Nombre</th></tr>
+                                <tr><th class="px-6 py-4">Nombre</th><th class="px-6 py-4 text-right">Acción</th></tr>
                             </thead>
                             <tbody id="table-body-sedes" class="divide-y divide-white/5"></tbody>
                         </table>
@@ -329,6 +330,7 @@
                                     <th class="px-6 py-4">Correo</th>
                                     <th class="px-6 py-4">Rol</th>
                                     <th class="px-6 py-4">Ingreso</th>
+                                    <th class="px-6 py-4 text-right">Acción</th>
                                 </tr>
                             </thead>
                             <tbody id="table-body-usuarios" class="divide-y divide-white/5"></tbody>
@@ -456,6 +458,13 @@
                 <div class="space-y-1">
                     <label class="fluent-label">Nombre del Banco</label>
                     <input type="text" id="banco-nombre" class="fluent-input" required>
+                </div>
+                <div class="space-y-1">
+                    <label class="fluent-label">Moneda</label>
+                    <select id="banco-moneda" class="fluent-input bg-black/20 appearance-none" required>
+                        <option value="Soles">Soles</option>
+                        <option value="Dolares">Dólares</option>
+                    </select>
                 </div>
                 <div class="flex justify-end space-x-3 pt-4">
                     <button type="button" id="btn-cancel-banco" class="px-4 py-2 text-sm font-bold text-slate-300 hover:text-white transition-colors">Cancelar</button>

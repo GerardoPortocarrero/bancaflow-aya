@@ -9,8 +9,10 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- 2. TABLA BANCOS
 CREATE TABLE IF NOT EXISTS public.bancos (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    nombre TEXT NOT NULL UNIQUE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+    nombre TEXT NOT NULL,
+    moneda TEXT NOT NULL DEFAULT 'Soles' CHECK (moneda IN ('Dolares', 'Soles')),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    UNIQUE (nombre, moneda)
 );
 
 -- 3. TABLA SEDES

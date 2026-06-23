@@ -269,6 +269,30 @@ ipcMain.handle('auth:crear-usuario', async (_event, datos) => {
   }
 });
 
+ipcMain.handle('auth:actualizar-usuario', async (_event, { id, nombre, apellido, rol }) => {
+  if (!supabaseAdmin) return { success: false, error: 'Falta SUPABASE_SERVICE_KEY en .env para esta acción.' };
+  try {
+    const { error: perfilError } = await supabaseAdmin.from('perfiles').update({ nombre, apellido, rol }).eq('id', id);
+    if (perfilError) return { success: false, error: perfilError.message };
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Error al actualizar usuario' };
+  }
+});
+
+ipcMain.handle('auth:eliminar-usuario', async (_event, { id }) => {
+  if (!supabaseAdmin) return { success: false, error: 'Falta SUPABASE_SERVICE_KEY en .env para esta acción.' };
+  try {
+    const { error: perfilError } = await supabaseAdmin.from('perfiles').delete().eq('id', id);
+    if (perfilError) return { success: false, error: perfilError.message };
+    const { error: userError } = await supabaseAdmin.auth.admin.deleteUser(id);
+    if (userError) return { success: false, error: userError.message };
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Error al eliminar usuario' };
+  }
+});
+
 // --- DRIVE ---
 
 ipcMain.handle('drive:test-connection', async () => {
@@ -297,9 +321,9 @@ ipcMain.handle('drive:upload-file', async (_event, { name, mimeType, base64Data 
 // --- BANCOS ---
 
 ipcMain.handle('db:listar-bancos', async () => {
-  if (!supabase) return { success: false, error: supabaseErrorMsg || 'Base de datos no configurada.' };
+  if (!supabaseAdmin) return { success: false, error: 'Base de datos no configurada.' };
   try {
-    const { data, error } = await supabase.from('bancos').select('*').order('nombre', { ascending: true });
+    const { data, error } = await supabaseAdmin.from('bancos').select('*').order('nombre', { ascending: true });
     if (error) return { success: false, error: error.message };
     return { success: true, bancos: data };
   } catch (err: any) {
@@ -307,10 +331,10 @@ ipcMain.handle('db:listar-bancos', async () => {
   }
 });
 
-ipcMain.handle('db:crear-banco', async (_event, { nombre }) => {
-  if (!supabase) return { success: false, error: supabaseErrorMsg || 'Base de datos no configurada.' };
+ipcMain.handle('db:crear-banco', async (_event, { nombre, moneda }) => {
+  if (!supabaseAdmin) return { success: false, error: 'Falta SUPABASE_SERVICE_KEY en .env para esta acción.' };
   try {
-    const { data, error } = await supabase.from('bancos').insert({ nombre }).select().single();
+    const { data, error } = await supabaseAdmin.from('bancos').insert({ nombre, moneda: moneda || 'Soles' }).select().single();
     if (error) return { success: false, error: error.message };
     return { success: true, banco: data };
   } catch (err: any) {
@@ -318,12 +342,34 @@ ipcMain.handle('db:crear-banco', async (_event, { nombre }) => {
   }
 });
 
+ipcMain.handle('db:actualizar-banco', async (_event, { id, nombre, moneda }) => {
+  if (!supabaseAdmin) return { success: false, error: 'Falta SUPABASE_SERVICE_KEY en .env para esta acción.' };
+  try {
+    const { data, error } = await supabaseAdmin.from('bancos').update({ nombre, moneda }).eq('id', id).select().single();
+    if (error) return { success: false, error: error.message };
+    return { success: true, banco: data };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Error al actualizar banco' };
+  }
+});
+
+ipcMain.handle('db:eliminar-banco', async (_event, { id }) => {
+  if (!supabaseAdmin) return { success: false, error: 'Falta SUPABASE_SERVICE_KEY en .env para esta acción.' };
+  try {
+    const { error } = await supabaseAdmin.from('bancos').delete().eq('id', id);
+    if (error) return { success: false, error: error.message };
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Error al eliminar banco' };
+  }
+});
+
 // --- SEDES ---
 
 ipcMain.handle('db:listar-sedes', async () => {
-  if (!supabase) return { success: false, error: supabaseErrorMsg || 'Base de datos no configurada.' };
+  if (!supabaseAdmin) return { success: false, error: 'Base de datos no configurada.' };
   try {
-    const { data, error } = await supabase.from('sedes').select('*').order('nombre', { ascending: true });
+    const { data, error } = await supabaseAdmin.from('sedes').select('*').order('nombre', { ascending: true });
     if (error) return { success: false, error: error.message };
     return { success: true, sedes: data };
   } catch (err: any) {
@@ -332,13 +378,35 @@ ipcMain.handle('db:listar-sedes', async () => {
 });
 
 ipcMain.handle('db:crear-sede', async (_event, { nombre }) => {
-  if (!supabase) return { success: false, error: supabaseErrorMsg || 'Base de datos no configurada.' };
+  if (!supabaseAdmin) return { success: false, error: 'Falta SUPABASE_SERVICE_KEY en .env para esta acción.' };
   try {
-    const { data, error } = await supabase.from('sedes').insert({ nombre }).select().single();
+    const { data, error } = await supabaseAdmin.from('sedes').insert({ nombre }).select().single();
     if (error) return { success: false, error: error.message };
     return { success: true, sede: data };
   } catch (err: any) {
     return { success: false, error: err.message || 'Error al crear sede' };
+  }
+});
+
+ipcMain.handle('db:actualizar-sede', async (_event, { id, nombre }) => {
+  if (!supabaseAdmin) return { success: false, error: 'Falta SUPABASE_SERVICE_KEY en .env para esta acción.' };
+  try {
+    const { data, error } = await supabaseAdmin.from('sedes').update({ nombre }).eq('id', id).select().single();
+    if (error) return { success: false, error: error.message };
+    return { success: true, sede: data };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Error al actualizar sede' };
+  }
+});
+
+ipcMain.handle('db:eliminar-sede', async (_event, { id }) => {
+  if (!supabaseAdmin) return { success: false, error: 'Falta SUPABASE_SERVICE_KEY en .env para esta acción.' };
+  try {
+    const { error } = await supabaseAdmin.from('sedes').delete().eq('id', id);
+    if (error) return { success: false, error: error.message };
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Error al eliminar sede' };
   }
 });
 
@@ -349,7 +417,7 @@ ipcMain.handle('db:listar-proveedores', async () => {
   try {
     const { data, error } = await supabase
       .from('proveedores')
-      .select(`*, bancos:banco_id (nombre), sedes:sede_id (nombre)`)
+      .select('*')
       .order('nombre_razon_social', { ascending: true });
     if (error) return { success: false, error: error.message };
     return { success: true, proveedores: data };
@@ -371,12 +439,34 @@ ipcMain.handle('db:crear-proveedor', async (_event, datos) => {
         sede_id: datos.sede_id || null,
         cci: datos.cci || null,
       })
-      .select(`*, bancos:banco_id (nombre), sedes:sede_id (nombre)`)
+      .select()
       .single();
     if (error) return { success: false, error: error.message };
     return { success: true, proveedor: data };
   } catch (err: any) {
     return { success: false, error: err.message || 'Error al crear proveedor' };
+  }
+});
+
+ipcMain.handle('db:actualizar-proveedor', async (_event, { id, ...datos }) => {
+  if (!supabaseAdmin) return { success: false, error: 'Falta SUPABASE_SERVICE_KEY en .env para esta acción.' };
+  try {
+    const { data, error } = await supabaseAdmin.from('proveedores').update(datos).eq('id', id).select().single();
+    if (error) return { success: false, error: error.message };
+    return { success: true, proveedor: data };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Error al actualizar proveedor' };
+  }
+});
+
+ipcMain.handle('db:eliminar-proveedor', async (_event, { id }) => {
+  if (!supabaseAdmin) return { success: false, error: 'Falta SUPABASE_SERVICE_KEY en .env para esta acción.' };
+  try {
+    const { error } = await supabaseAdmin.from('proveedores').delete().eq('id', id);
+    if (error) return { success: false, error: error.message };
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Error al eliminar proveedor' };
   }
 });
 
