@@ -1,52 +1,55 @@
-// @ts-ignore
-const { createIcons, LayoutDashboard, FilePlus, History, Bell, Settings, LogOut, Inbox, Users, Shield } = lucide;
+declare const lucide: any;
+const { createIcons, LayoutDashboard, FilePlus, History: HistoryIcon, Bell, Settings, LogOut, Inbox, Users, Shield, Landmark, Building } = lucide;
 
-// Definición de Interfaz para el API de Electron (Bridge)
+interface ArchivoSubido {
+  name: string;
+  driveId: string;
+  driveUrl: string;
+}
+
 interface IElectronAPI {
-    auth: {
-        login: (correo: string, contrasena: string) => Promise<{ success: boolean; user?: any; error?: string }>;
-        logout: () => Promise<{ success: boolean; error?: string }>;
-        obtenerSesion: () => Promise<{ session: any }>;
-        crearUsuario: (datos: any) => Promise<{ success: boolean; user?: any; error?: string }>;
-        listarUsuarios: () => Promise<{ success: boolean; usuarios?: any[]; error?: string }>;
-    };
-    drive: {
-        testConnection: () => Promise<{ success: boolean; folder?: { id: string; name: string }; error?: string }>;
-        uploadFile: (name: string, mimeType: string, base64Data: string) => Promise<{ success: boolean; file?: any; error?: string }>;
-        uploadOptimized: (name: string, mimeType: string, base64Data: string) => Promise<{ success: boolean; file?: any; error?: string }>;
-    };
-    db: {
-        crearSolicitud: (datos: any) => Promise<{ success: boolean; solicitud?: any; error?: string }>;
-        listarSolicitudes: (filtro: string) => Promise<{ success: boolean; solicitudes?: any[]; error?: string }>;
-        crearProveedor: (datos: any) => Promise<{ success: boolean; proveedor?: any; error?: string }>;
-        listarProveedores: () => Promise<{ success: boolean; proveedores?: any[]; error?: string }>;
-    };
+  auth: {
+    login: (correo: string, contrasena: string) => Promise<{ success: boolean; user?: any; error?: string }>;
+    logout: () => Promise<{ success: boolean; error?: string }>;
+    obtenerSesion: () => Promise<{ session: any }>;
+    crearUsuario: (datos: any) => Promise<{ success: boolean; user?: any; error?: string }>;
+    listarUsuarios: () => Promise<{ success: boolean; usuarios?: any[]; error?: string }>;
+  };
+  drive: {
+    testConnection: () => Promise<{ success: boolean; folder?: { id: string; name: string }; error?: string }>;
+    uploadFile: (name: string, mimeType: string, base64Data: string) => Promise<{ success: boolean; file?: any; error?: string }>;
+  };
+  db: {
+    listarBancos: () => Promise<{ success: boolean; bancos?: any[]; error?: string }>;
+    crearBanco: (nombre: string) => Promise<{ success: boolean; banco?: any; error?: string }>;
+    listarSedes: () => Promise<{ success: boolean; sedes?: any[]; error?: string }>;
+    crearSede: (nombre: string) => Promise<{ success: boolean; sede?: any; error?: string }>;
+    listarProveedores: () => Promise<{ success: boolean; proveedores?: any[]; error?: string }>;
+    crearProveedor: (datos: any) => Promise<{ success: boolean; proveedor?: any; error?: string }>;
+    crearSolicitud: (datos: any) => Promise<{ success: boolean; solicitud?: any; error?: string }>;
+    listarSolicitudes: (vista: string, rol: string) => Promise<{ success: boolean; solicitudes?: any[]; error?: string }>;
+    observarSolicitud: (id: string, motivo: string) => Promise<{ success: boolean; solicitud?: any; error?: string }>;
+    bancarizarSolicitud: (id: string, evidencias: any[]) => Promise<{ success: boolean; solicitud?: any; error?: string }>;
+    actualizarSolicitud: (datos: any) => Promise<{ success: boolean; solicitud?: any; error?: string }>;
+  };
 }
 
-interface Window {
-    electronAPI: IElectronAPI;
-}
+interface Window { electronAPI: IElectronAPI; }
 
-// Inicializar iconos
 function initIcons() {
-    createIcons({
-        icons: {
-            LayoutDashboard,
-            FilePlus,
-            History,
-            Bell,
-            Settings,
-            LogOut,
-            Inbox,
-            Users,
-            Shield
-        }
-    });
+  createIcons({
+    icons: { LayoutDashboard, FilePlus, History, Bell, Settings, LogOut, Inbox, Users, Shield, Landmark, Building }
+  });
 }
-
 initIcons();
 
-// --- ELEMENTOS DEL DOM ---
+// --- STATE ---
+let currentUser: any = null;
+let editingSolicitudId: string | null = null;
+let solicitudFiles: File[] = [];
+let bancarizarFiles: File[] = [];
+
+// --- DOM REFS ---
 const loginScreen = document.getElementById('login-screen');
 const appContainer = document.getElementById('app-container');
 const loginForm = document.getElementById('login-form') as HTMLFormElement;
@@ -55,673 +58,789 @@ const loginBtn = document.getElementById('login-btn') as HTMLButtonElement;
 const loginBtnText = document.getElementById('login-btn-text');
 const loginBtnSpinner = document.getElementById('login-btn-spinner');
 
-// Elementos de Perfil en Sidebar (Robustos con IDs)
 const userInitials = document.getElementById('user-initials');
 const userName = document.getElementById('user-name');
 const userRole = document.getElementById('user-role');
 const logoutBtn = document.getElementById('logout-btn');
 
-let currentUser: any = null;
-
-// --- FUNCIONES DE AUTENTICACIÓN & NAVEGACIÓN ---
-
+// --- AUTH ---
 async function verificarSesion() {
-    try {
-        const { session } = await window.electronAPI.auth.obtenerSesion();
-        if (session) {
-            mostrarApp(session);
-        }
-    } catch (err) {
-        console.error('Error al verificar sesión:', err);
-    }
+  try {
+    const { session } = await window.electronAPI.auth.obtenerSesion();
+    if (session) mostrarApp(session);
+  } catch (err) { console.error(err); }
 }
 
 function aplicarFiltroDeRoles(rol: string) {
-    const navBandeja = document.getElementById('nav-bandeja');
-    const navNueva = document.getElementById('nav-nueva-solicitud');
-    const navProv = document.getElementById('nav-proveedores');
-    const navUsr = document.getElementById('nav-usuarios');
-    const navHist = document.getElementById('nav-historial');
+  const navItems = [
+    'nav-mis-solicitudes', 'nav-cfo-bandeja', 'nav-bancarizados',
+    'nav-proveedores', 'nav-bancos', 'nav-sedes', 'nav-usuarios'
+  ];
+  navItems.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.add('hidden');
+  });
 
-    // Resetear visibilidad (ocultar todos menos dashboard)
-    if (navBandeja) navBandeja.classList.add('hidden');
-    if (navNueva) navNueva.classList.add('hidden');
-    if (navProv) navProv.classList.add('hidden');
-    if (navUsr) navUsr.classList.add('hidden');
-    if (navHist) navHist.classList.add('hidden');
+  if (rol === 'CFO') {
+    setVis('nav-cfo-bandeja', true);
+    setVis('nav-bancarizados', true);
+    setVis('nav-proveedores', true);
+  } else if (rol === 'ADMINISTRADOR') {
+    setVis('nav-mis-solicitudes', true);
+    setVis('nav-bancarizados', true);
+    setVis('nav-proveedores', true);
+    setVis('nav-bancos', true);
+    setVis('nav-sedes', true);
+    setVis('nav-usuarios', true);
+  } else {
+    setVis('nav-mis-solicitudes', true);
+    setVis('nav-bancarizados', true);
+  }
+}
 
-    if (rol === 'CFO') {
-        if (navBandeja) navBandeja.classList.remove('hidden');
-        if (navHist) navHist.classList.remove('hidden');
-    } else if (rol === 'ADMINISTRADOR') {
-        if (navProv) navProv.classList.remove('hidden');
-        if (navUsr) navUsr.classList.remove('hidden');
-    } else {
-        // CONTADOR / RRHH
-        if (navNueva) navNueva.classList.remove('hidden');
-        if (navBandeja) navBandeja.classList.remove('hidden');
-        if (navHist) navHist.classList.remove('hidden');
-        // Quien registra necesita ver proveedores para crear nuevos si es necesario
-        if (navProv) navProv.classList.remove('hidden');
-    }
+function setVis(id: string, show: boolean) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (show) el.classList.remove('hidden'); else el.classList.add('hidden');
 }
 
 async function verificarGoogleDrive() {
-    const statusDot = document.getElementById('drive-status-dot');
-    const statusText = document.getElementById('drive-status-text');
-    if (!statusDot || !statusText) return;
-
-    try {
-        const resultado = await window.electronAPI.drive.testConnection();
-        if (resultado.success) {
-            statusDot.className = 'w-1.5 h-1.5 rounded-full bg-emerald-400';
-            statusText.textContent = `Drive: Conectado (${resultado.folder?.name})`;
-            statusText.className = 'text-[10px] font-bold text-emerald-400';
-        } else {
-            statusDot.className = 'w-1.5 h-1.5 rounded-full bg-red-400';
-            statusText.textContent = 'Drive: Sin Configurar';
-            statusText.className = 'text-[10px] font-bold text-red-400';
-            console.warn('Google Drive no conectado:', resultado.error);
-        }
-    } catch (err) {
-        statusDot.className = 'w-1.5 h-1.5 rounded-full bg-red-400';
-        statusText.textContent = 'Drive: Error';
-        statusText.className = 'text-[10px] font-bold text-red-400';
-        console.error('Error al probar Google Drive:', err);
+  const statusDot = document.getElementById('drive-status-dot');
+  const statusText = document.getElementById('drive-status-text');
+  if (!statusDot || !statusText) return;
+  try {
+    const resultado = await window.electronAPI.drive.testConnection();
+    if (resultado.success) {
+      statusDot.className = 'w-1.5 h-1.5 rounded-full bg-emerald-400';
+      statusText.textContent = `Drive: Conectado (${resultado.folder?.name})`;
+      statusText.className = 'text-[10px] font-bold text-emerald-400';
+    } else {
+      statusDot.className = 'w-1.5 h-1.5 rounded-full bg-red-400';
+      statusText.textContent = 'Drive: Sin Configurar';
+      statusText.className = 'text-[10px] font-bold text-red-400';
     }
+  } catch (err) {
+    statusDot.className = 'w-1.5 h-1.5 rounded-full bg-red-400';
+    statusText.textContent = 'Drive: Error';
+    statusText.className = 'text-[10px] font-bold text-red-400';
+  }
 }
 
-function mostrarApp(user: any) {
-    currentUser = user;
+async function mostrarApp(user: any) {
+  currentUser = user;
+  if (!loginScreen || !appContainer) return;
+  loginScreen.classList.add('hidden');
+  appContainer.classList.remove('hidden');
 
-    if (loginScreen && appContainer) {
-        loginScreen.classList.add('hidden');
-        appContainer.classList.remove('hidden');
+  if (userName) userName.textContent = user.nombre || user.email;
+  if (userRole) userRole.textContent = user.rol;
+  if (userInitials) {
+    const iniciales = (user.nombre || user.email || 'U')
+      .split(' ').filter((n: string) => n.length > 0).map((n: string) => n[0]).join('').substring(0, 2).toUpperCase();
+    userInitials.textContent = iniciales || 'U';
+  }
 
-        // Actualizar datos del usuario en la UI
-        if (userName) userName.textContent = user.nombre;
-        if (userRole) userRole.textContent = user.rol;
-        if (userInitials) {
-            const iniciales = user.nombre
-                .split(' ')
-                .filter((n: string) => n.length > 0)
-                .map((n: string) => n[0])
-                .join('')
-                .substring(0, 2)
-                .toUpperCase();
-            userInitials.textContent = iniciales || 'U';
-        }
+  aplicarFiltroDeRoles(user.rol);
+  verificarGoogleDrive();
+  await cargarDatosIniciales();
 
-        // Aplicar restricciones de rol (RF1.2)
-        aplicarFiltroDeRoles(user.rol);
-
-        // Verificar la conexión de Google Drive
-        verificarGoogleDrive();
-
-        // Cargar datos iniciales
-        cargarDatosIniciales();
-
-        // Si el rol es CFO o ADMIN, redirigir desde 'nueva solicitud' a un default válido
-        const activeLink = document.querySelector('.nav-link-active') as HTMLElement;
-        if (activeLink && activeLink.getAttribute('data-target') === 'view-nueva-solicitud') {
-            if (user.rol === 'CFO' || user.rol === 'ADMINISTRADOR') {
-                const dashboardLink = document.querySelector('[data-target="view-dashboard"]') as HTMLElement;
-                if (dashboardLink) dashboardLink.click();
-            }
-        }
-    }
+  const activeLink = document.querySelector('.nav-link-active') as HTMLElement;
+  if (activeLink && activeLink.getAttribute('data-target') === 'view-mis-solicitudes' && user.rol === 'CFO') {
+    const dashboardLink = document.querySelector('[data-target="view-dashboard"]') as HTMLElement;
+    if (dashboardLink) dashboardLink.click();
+  }
 }
 
 // --- CARGA DE DATOS ---
 async function cargarDatosIniciales() {
-    await cargarProveedores();
-    if (currentUser?.rol === 'ADMINISTRADOR') {
-        await cargarUsuarios();
-    }
-    await cargarSolicitudes();
+  await Promise.all([
+    cargarProveedores(),
+    cargarBancos(),
+    cargarSedes(),
+  ]);
+  if (currentUser?.rol === 'ADMINISTRADOR') {
+    await cargarUsuarios();
+  }
+  await Promise.all([
+    cargarMisSolicitudes(),
+    cargarDashboard(),
+  ]);
+  if (currentUser?.rol === 'CFO') {
+    await cargarBandejaCFO();
+  }
+  await cargarBancarizados();
 }
 
+// --- DASHBOARD ---
+async function cargarDashboard() {
+  const rol = currentUser?.rol;
+  const esCFO = rol === 'CFO';
+  const res = await window.electronAPI.db.listarSolicitudes(esCFO ? 'cfo-bandeja' : 'mis-solicitudes', rol);
+  const solicitudes = res.success && Array.isArray(res.solicitudes) ? res.solicitudes : [];
+  const pendientes = solicitudes.filter((s: any) => s.estado === 'PENDIENTE').length;
+  const observados = solicitudes.filter((s: any) => s.estado === 'OBSERVADO').length;
+
+  const resBanc = await window.electronAPI.db.listarSolicitudes('bancarizados', rol);
+  const bancarizados = resBanc.success && Array.isArray(resBanc.solicitudes) ? resBanc.solicitudes.length : 0;
+
+  setText('dashboard-pendientes', String(pendientes + observados));
+  setText('dashboard-por-bancarizar', String(esCFO ? pendientes : pendientes));
+  setText('dashboard-bancarizados', String(bancarizados));
+}
+
+function setText(id: string, text: string) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = text;
+}
+
+// --- MIS SOLICITUDES ---
+async function cargarMisSolicitudes() {
+  const res = await window.electronAPI.db.listarSolicitudes('mis-solicitudes', currentUser?.rol || '');
+  const tbody = document.getElementById('table-body-mis-solicitudes');
+  if (!tbody) return;
+  const solicitudes = res.success && Array.isArray(res.solicitudes) ? res.solicitudes : [];
+  if (solicitudes.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6" class="text-center p-8 text-slate-500">No tienes solicitudes pendientes.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = solicitudes.map((s: any) => `
+    <tr class="hover:bg-white/5 transition-colors">
+      <td class="px-6 py-4">${new Date(s.created_at).toLocaleDateString()}</td>
+      <td class="px-6 py-4 font-bold text-white">${s.proveedores?.nombre_razon_social || '-'}</td>
+      <td class="px-6 py-4 font-bold text-emerald-400">S/ ${Number(s.monto).toFixed(2)}</td>
+      <td class="px-6 py-4">
+        <span class="px-2 py-1 rounded text-[10px] font-bold tracking-wider ${s.estado === 'PENDIENTE' ? 'bg-amber-400/10 text-amber-400 border border-amber-400/20' : 'bg-red-400/10 text-red-400 border border-red-400/20'}">${s.estado}</span>
+      </td>
+      <td class="px-6 py-4 text-slate-400 text-xs">${s.observacion_motivo || '-'}</td>
+      <td class="px-6 py-4 text-right">
+        ${s.estado === 'OBSERVADO' ? `<button class="btn-editar-solicitud text-[10px] uppercase font-bold text-fluent-accent hover:underline" data-id="${s.id}">Editar</button>` : '-'}
+      </td>
+    </tr>
+  `).join('');
+
+  tbody.querySelectorAll('.btn-editar-solicitud').forEach(btn => {
+    btn.addEventListener('click', () => abrirModalSolicitud(btn.getAttribute('data-id')));
+  });
+}
+
+// --- MODAL SOLICITUD (Nueva / Editar) ---
+async function abrirModalSolicitud(solicitudId: string | null = null) {
+  editingSolicitudId = solicitudId;
+  solicitudFiles = [];
+  const titleEl = document.getElementById('modal-solicitud-title');
+  const btnSubmit = document.getElementById('btn-submit-solicitud');
+  if (titleEl) titleEl.textContent = solicitudId ? 'Editar Solicitud' : 'Nueva Solicitud';
+  if (btnSubmit) btnSubmit.textContent = solicitudId ? 'Actualizar y Reenviar' : 'Enviar Solicitud';
+
+  const form = document.getElementById('form-solicitud') as HTMLFormElement;
+  form.reset();
+  document.getElementById('file-list-solicitud')!.innerHTML = '';
+  document.getElementById('alert-detraccion')?.classList.add('hidden');
+  document.getElementById('submit-error-solicitud')?.classList.add('hidden');
+  document.getElementById('upload-progress-solicitud')?.classList.add('hidden');
+
+  if (solicitudId) {
+    const res = await window.electronAPI.db.listarSolicitudes('mis-solicitudes', currentUser?.rol || '');
+    if (res.success && Array.isArray(res.solicitudes)) {
+      const sol = res.solicitudes.find((s: any) => s.id === solicitudId);
+      if (sol) {
+        (document.getElementById('input-proveedor') as HTMLSelectElement).value = sol.proveedor_id;
+        (document.getElementById('input-monto') as HTMLInputElement).value = sol.monto;
+        (document.getElementById('input-descripcion') as HTMLTextAreaElement).value = sol.descripcion;
+        if (sol.monto > 700) document.getElementById('alert-detraccion')?.classList.remove('hidden');
+      }
+    }
+  }
+
+  openModal('modal-solicitud');
+}
+
+async function submitSolicitud(e: Event) {
+  e.preventDefault();
+  const proveedorId = (document.getElementById('input-proveedor') as HTMLSelectElement).value;
+  const monto = parseFloat((document.getElementById('input-monto') as HTMLInputElement).value);
+  const descripcion = (document.getElementById('input-descripcion') as HTMLTextAreaElement).value.trim();
+  const errorDiv = document.getElementById('submit-error-solicitud');
+  const errorText = document.getElementById('submit-error-text-solicitud');
+  const progressDiv = document.getElementById('upload-progress-solicitud');
+  const progressFill = document.getElementById('progress-bar-fill-solicitud');
+  const progressText = document.getElementById('progress-text-solicitud');
+  const btn = document.getElementById('btn-submit-solicitud') as HTMLButtonElement;
+
+  if (!proveedorId || !monto || !descripcion) { alert('Complete todos los campos.'); return; }
+  errorDiv?.classList.add('hidden');
+  btn.disabled = true;
+  btn.textContent = 'Procesando...';
+
+  try {
+    const archivosSubidos: ArchivoSubido[] = [];
+
+    if (solicitudFiles.length > 0) {
+      progressDiv?.classList.remove('hidden');
+      for (let i = 0; i < solicitudFiles.length; i++) {
+        const file = solicitudFiles[i];
+        const pct = Math.round(((i + 1) / solicitudFiles.length) * 100);
+        if (progressFill) progressFill.style.width = `${pct}%`;
+        if (progressText) progressText.textContent = `Subiendo ${file.name}...`;
+
+        const base64Data = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.readAsDataURL(file);
+          reader.onload = () => resolve((reader.result as string).split(',')[1]);
+          reader.onerror = reject;
+        });
+
+        const driveRes = await window.electronAPI.drive.uploadFile(file.name, file.type, base64Data);
+        if (!driveRes.success) throw new Error(`Error al subir ${file.name}: ${driveRes.error}`);
+        archivosSubidos.push({
+          name: driveRes.file.name,
+          driveId: driveRes.file.id,
+          driveUrl: driveRes.file.webViewLink
+        });
+      }
+    }
+
+    if (progressText) progressText.textContent = 'Guardando...';
+
+    if (editingSolicitudId) {
+      const res = await window.electronAPI.db.actualizarSolicitud({
+        id: editingSolicitudId,
+        descripcion,
+        proveedorId,
+        monto,
+        archivos: archivosSubidos.length > 0 ? archivosSubidos : undefined
+      });
+      if (!res.success) throw new Error(res.error || 'Error al actualizar');
+    } else {
+      const res = await window.electronAPI.db.crearSolicitud({
+        proveedorId,
+        descripcion,
+        monto,
+        requiereDetraccion: monto > 700,
+        archivos: archivosSubidos
+      });
+      if (!res.success) throw new Error(res.error || 'Error al crear');
+    }
+
+    closeModal('modal-solicitud');
+    await Promise.all([cargarMisSolicitudes(), cargarDashboard(), cargarBancarizados()]);
+  } catch (err: any) {
+    if (errorText) errorText.textContent = err.message;
+    errorDiv?.classList.remove('hidden');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = editingSolicitudId ? 'Actualizar y Reenviar' : 'Enviar Solicitud';
+    progressDiv?.classList.add('hidden');
+  }
+}
+
+// --- BANDEJA CFO ---
+async function cargarBandejaCFO() {
+  if (currentUser?.rol !== 'CFO') return;
+  const res = await window.electronAPI.db.listarSolicitudes('cfo-bandeja', 'CFO');
+  const tbody = document.getElementById('table-body-cfo-bandeja');
+  const solicitudes = res.success && Array.isArray(res.solicitudes) ? res.solicitudes : [];
+  if (!tbody) return;
+  if (solicitudes.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" class="text-center p-8 text-slate-500">No hay solicitudes pendientes.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = solicitudes.map((s: any) => `
+    <tr class="hover:bg-white/5 transition-colors">
+      <td class="px-6 py-4">${new Date(s.created_at).toLocaleDateString()}</td>
+      <td class="px-6 py-4 font-bold text-white">${s.perfiles?.nombre || 'N/A'} ${s.perfiles?.apellido || ''}</td>
+      <td class="px-6 py-4">${s.proveedores?.nombre_razon_social || '-'}</td>
+      <td class="px-6 py-4 font-bold text-emerald-400">S/ ${Number(s.monto).toFixed(2)}</td>
+      <td class="px-6 py-4">
+        <span class="px-2 py-1 rounded text-[10px] font-bold tracking-wider ${s.estado === 'PENDIENTE' ? 'bg-amber-400/10 text-amber-400 border border-amber-400/20' : 'bg-red-400/10 text-red-400 border border-red-400/20'}">${s.estado}</span>
+        ${s.observacion_motivo ? `<div class="text-[10px] text-slate-400 mt-1">${s.observacion_motivo}</div>` : ''}
+      </td>
+      <td class="px-6 py-4">
+        ${renderArchivos(s.archivos)}
+      </td>
+      <td class="px-6 py-4 text-right space-x-2">
+        <button class="btn-bancarizar text-[10px] uppercase font-bold bg-emerald-500/20 text-emerald-400 px-3 py-1.5 rounded-lg hover:bg-emerald-500/30" data-id="${s.id}">Bancarizar</button>
+        <button class="btn-observar text-[10px] uppercase font-bold bg-red-500/20 text-red-400 px-3 py-1.5 rounded-lg hover:bg-red-500/30" data-id="${s.id}">Rebotar</button>
+      </td>
+    </tr>
+  `).join('');
+
+  tbody.querySelectorAll('.btn-bancarizar').forEach(btn => {
+    btn.addEventListener('click', () => abrirModalBancarizar(btn.getAttribute('data-id')));
+  });
+  tbody.querySelectorAll('.btn-observar').forEach(btn => {
+    btn.addEventListener('click', () => abrirModalObservar(btn.getAttribute('data-id')));
+  });
+}
+
+function renderArchivos(archivos: any): string {
+  if (!archivos || !Array.isArray(archivos) || archivos.length === 0) return '-';
+  return archivos.map((a: any) =>
+    `<a href="${a.driveUrl}" target="_blank" class="text-[10px] text-fluent-accent hover:underline block">${a.name}</a>`
+  ).join('');
+}
+
+// --- MODAL OBSERVAR ---
+let observarSolicitudId: string | null = null;
+
+function abrirModalObservar(id: string | null) {
+  observarSolicitudId = id;
+  (document.getElementById('form-observar') as HTMLFormElement).reset();
+  openModal('modal-observar');
+}
+
+async function submitObservar(e: Event) {
+  e.preventDefault();
+  const motivo = (document.getElementById('observar-motivo') as HTMLTextAreaElement).value.trim();
+  if (!motivo || !observarSolicitudId) return;
+  const btn = (e.target as HTMLFormElement).querySelector('button[type="submit"]') as HTMLButtonElement;
+  btn.disabled = true; btn.textContent = 'Guardando...';
+  const res = await window.electronAPI.db.observarSolicitud(observarSolicitudId, motivo);
+  if (res.success) {
+    closeModal('modal-observar');
+    await Promise.all([cargarBandejaCFO(), cargarDashboard()]);
+  } else {
+    alert('Error: ' + res.error);
+  }
+  btn.disabled = false; btn.textContent = 'Rebotar';
+}
+
+// --- MODAL BANCARIZAR ---
+let bancarizarSolicitudId: string | null = null;
+
+function abrirModalBancarizar(id: string | null) {
+  bancarizarSolicitudId = id;
+  bancarizarFiles = [];
+  document.getElementById('file-list-bancarizar')!.innerHTML = '';
+  document.getElementById('submit-error-bancarizar')?.classList.add('hidden');
+  document.getElementById('upload-progress-bancarizar')?.classList.add('hidden');
+  openModal('modal-bancarizar');
+}
+
+async function submitBancarizar(e: Event) {
+  e.preventDefault();
+  const errorDiv = document.getElementById('submit-error-bancarizar');
+  const errorText = document.getElementById('submit-error-text-bancarizar');
+  const progressDiv = document.getElementById('upload-progress-bancarizar');
+  const progressFill = document.getElementById('progress-bar-fill-bancarizar');
+  const progressText = document.getElementById('progress-text-bancarizar');
+  const btn = (e.target as HTMLFormElement).querySelector('button[type="submit"]') as HTMLButtonElement;
+
+  if (!bancarizarSolicitudId) return;
+  if (bancarizarFiles.length === 0) { alert('Adjunte al menos una evidencia.'); return; }
+
+  errorDiv?.classList.add('hidden');
+  btn.disabled = true; btn.textContent = 'Procesando...';
+
+  try {
+    const evidenciasSubidas: ArchivoSubido[] = [];
+    progressDiv?.classList.remove('hidden');
+
+    for (let i = 0; i < bancarizarFiles.length; i++) {
+      const file = bancarizarFiles[i];
+      const pct = Math.round(((i + 1) / bancarizarFiles.length) * 100);
+      if (progressFill) progressFill.style.width = `${pct}%`;
+      if (progressText) progressText.textContent = `Subiendo ${file.name}...`;
+
+      const base64Data = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve((reader.result as string).split(',')[1]);
+        reader.onerror = reject;
+      });
+
+      const driveRes = await window.electronAPI.drive.uploadFile(file.name, file.type, base64Data);
+      if (!driveRes.success) throw new Error(`Error al subir ${file.name}: ${driveRes.error}`);
+      evidenciasSubidas.push({
+        name: driveRes.file.name,
+        driveId: driveRes.file.id,
+        driveUrl: driveRes.file.webViewLink
+      });
+    }
+
+    if (progressText) progressText.textContent = 'Bancarizando...';
+    const res = await window.electronAPI.db.bancarizarSolicitud(bancarizarSolicitudId, evidenciasSubidas);
+    if (!res.success) throw new Error(res.error || 'Error al bancarizar');
+
+    closeModal('modal-bancarizar');
+    await Promise.all([cargarBandejaCFO(), cargarBancarizados(), cargarDashboard()]);
+  } catch (err: any) {
+    if (errorText) errorText.textContent = err.message;
+    errorDiv?.classList.remove('hidden');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Confirmar Bancarización';
+    progressDiv?.classList.add('hidden');
+  }
+}
+
+// --- BANCARIZADOS ---
+async function cargarBancarizados() {
+  const rol = currentUser?.rol || '';
+  const res = await window.electronAPI.db.listarSolicitudes('bancarizados', rol);
+  const tbody = document.getElementById('table-body-bancarizados');
+  const solicitudes = res.success && Array.isArray(res.solicitudes) ? res.solicitudes : [];
+  if (!tbody) return;
+  if (solicitudes.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6" class="text-center p-8 text-slate-500">No hay solicitudes bancarizadas.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = solicitudes.map((s: any) => `
+    <tr class="hover:bg-white/5 transition-colors">
+      <td class="px-6 py-4">${new Date(s.updated_at).toLocaleDateString()}</td>
+      <td class="px-6 py-4 font-bold text-white">${s.perfiles?.nombre || 'N/A'} ${s.perfiles?.apellido || ''}</td>
+      <td class="px-6 py-4">${s.proveedores?.nombre_razon_social || '-'}</td>
+      <td class="px-6 py-4 font-bold text-emerald-400">S/ ${Number(s.monto).toFixed(2)}</td>
+      <td class="px-6 py-4">${renderArchivos(s.archivos)}</td>
+      <td class="px-6 py-4 text-right">${renderArchivos(s.evidencias_bancarizacion)}</td>
+    </tr>
+  `).join('');
+}
+
+// --- PROVEEDORES ---
 async function cargarProveedores() {
-    const inputProveedor = document.getElementById('input-proveedor') as HTMLSelectElement;
-    try {
-        const res = await window.electronAPI.db.listarProveedores();
-        if (res.success && res.proveedores) {
-            // Llenar select
-            if (inputProveedor) {
-                inputProveedor.innerHTML = '<option value="" disabled selected>Seleccione un proveedor...</option>';
-                res.proveedores.forEach(p => {
-                    const opt = document.createElement('option');
-                    opt.value = p.id;
-                    opt.textContent = p.nombre_razon_social;
-                    inputProveedor.appendChild(opt);
-                });
-            }
-            // Llenar tabla
-            const tbody = document.getElementById('table-body-proveedores');
-            if (tbody) {
-                tbody.innerHTML = res.proveedores.map(p => `
-                    <tr class="hover:bg-white/5 transition-colors">
-                        <td class="px-6 py-4 font-bold text-white">${p.nombre_razon_social}</td>
-                        <td class="px-6 py-4 text-slate-400">${p.correo || '-'}</td>
-                        <td class="px-6 py-4">${p.banco || '-'}</td>
-                        <td class="px-6 py-4">${p.numero_cuenta || '-'}</td>
-                        <td class="px-6 py-4 text-right">
-                            <button class="text-[10px] uppercase font-bold text-fluent-accent hover:underline">Editar</button>
-                        </td>
-                    </tr>
-                `).join('');
-            }
-        }
-    } catch (err) {
-        console.error('Error al cargar proveedores:', err);
-    }
+  const res = await window.electronAPI.db.listarProveedores();
+  const select = document.getElementById('input-proveedor') as HTMLSelectElement;
+  if (select && res.success) {
+    select.innerHTML = '<option value="" disabled selected>Seleccione un proveedor...</option>' +
+      (res.proveedores || []).map((p: any) => `<option value="${p.id}">${p.nombre_razon_social}</option>`).join('');
+  }
+  const tbody = document.getElementById('table-body-proveedores');
+  if (tbody && res.success) {
+    tbody.innerHTML = (res.proveedores || []).map((p: any) => `
+      <tr class="hover:bg-white/5 transition-colors">
+        <td class="px-6 py-4 font-bold text-white">${p.nombre_razon_social}</td>
+        <td class="px-6 py-4 text-slate-400">${p.correo || '-'}</td>
+        <td class="px-6 py-4">${p.bancos?.nombre || '-'}</td>
+        <td class="px-6 py-4">${p.numero_cuenta || '-'}</td>
+        <td class="px-6 py-4">${p.sedes?.nombre || '-'}</td>
+        <td class="px-6 py-4 text-right">${p.cci || '-'}</td>
+      </tr>
+    `).join('');
+  }
 }
 
+// --- BANCOS ---
+async function cargarBancos() {
+  const res = await window.electronAPI.db.listarBancos();
+  const selects = ['prov-banco-id'];
+  selects.forEach(id => {
+    const sel = document.getElementById(id) as HTMLSelectElement;
+    if (sel && res.success) {
+      sel.innerHTML = '<option value="">Seleccione...</option>' +
+        (res.bancos || []).map((b: any) => `<option value="${b.id}">${b.nombre}</option>`).join('');
+    }
+  });
+  const tbody = document.getElementById('table-body-bancos');
+  if (tbody && res.success) {
+    tbody.innerHTML = (res.bancos || []).map((b: any) =>
+      `<tr class="hover:bg-white/5 transition-colors"><td class="px-6 py-4 font-bold text-white">${b.nombre}</td></tr>`
+    ).join('');
+  }
+}
+
+// --- SEDES ---
+async function cargarSedes() {
+  const res = await window.electronAPI.db.listarSedes();
+  const selects = ['prov-sede-id'];
+  selects.forEach(id => {
+    const sel = document.getElementById(id) as HTMLSelectElement;
+    if (sel && res.success) {
+      sel.innerHTML = '<option value="">Seleccione...</option>' +
+        (res.sedes || []).map((s: any) => `<option value="${s.id}">${s.nombre}</option>`).join('');
+    }
+  });
+  const tbody = document.getElementById('table-body-sedes');
+  if (tbody && res.success) {
+    tbody.innerHTML = (res.sedes || []).map((s: any) =>
+      `<tr class="hover:bg-white/5 transition-colors"><td class="px-6 py-4 font-bold text-white">${s.nombre}</td></tr>`
+    ).join('');
+  }
+}
+
+// --- USUARIOS ---
 async function cargarUsuarios() {
-    try {
-        const res = await window.electronAPI.auth.listarUsuarios();
-        if (res.success && res.usuarios) {
-            const tbody = document.getElementById('table-body-usuarios');
-            if (tbody) {
-                tbody.innerHTML = res.usuarios.map(u => `
-                    <tr class="hover:bg-white/5 transition-colors">
-                        <td class="px-6 py-4 font-bold text-white">${u.nombre} ${u.apellido}</td>
-                        <td class="px-6 py-4 text-slate-400">${u.email}</td>
-                        <td class="px-6 py-4"><span class="px-2 py-1 bg-white/10 rounded text-[10px] font-bold tracking-wider">${u.rol}</span></td>
-                        <td class="px-6 py-4">${new Date(u.created_at).toLocaleDateString()}</td>
-                        <td class="px-6 py-4 text-right">
-                            <button class="text-[10px] uppercase font-bold text-fluent-accent hover:underline">Gestionar</button>
-                        </td>
-                    </tr>
-                `).join('');
-            }
-        }
-    } catch (err) {
-        console.error('Error al cargar usuarios:', err);
+  const res = await window.electronAPI.auth.listarUsuarios();
+  const tbody = document.getElementById('table-body-usuarios');
+  if (tbody && res.success) {
+    tbody.innerHTML = (res.usuarios || []).map((u: any) => `
+      <tr class="hover:bg-white/5 transition-colors">
+        <td class="px-6 py-4 font-bold text-white">${u.nombre} ${u.apellido}</td>
+        <td class="px-6 py-4 text-slate-400">${u.email}</td>
+        <td class="px-6 py-4"><span class="px-2 py-1 bg-white/10 rounded text-[10px] font-bold tracking-wider">${u.rol}</span></td>
+        <td class="px-6 py-4">${new Date(u.created_at).toLocaleDateString()}</td>
+      </tr>
+    `).join('');
+  }
+}
+
+// --- FILE DROP HELPERS ---
+function setupFileDropzone(dropzoneId: string, inputId: string, browseId: string, listId: string, fileArray: { files: File[] }) {
+  const dropzone = document.getElementById(dropzoneId);
+  const input = document.getElementById(inputId) as HTMLInputElement;
+  const browse = document.getElementById(browseId);
+  const list = document.getElementById(listId);
+
+  if (!dropzone || !input) return;
+
+  if (browse) browse.addEventListener('click', () => input.click());
+  dropzone.addEventListener('click', (e) => { if ((e.target as HTMLElement) !== browse) input.click(); });
+
+  input.addEventListener('change', () => {
+    if (input.files) {
+      for (let i = 0; i < input.files.length; i++) {
+        fileArray.files.push(input.files[i]);
+      }
+      renderFileList(listId, fileArray.files, fileArray);
     }
-}
+  });
 
-async function cargarSolicitudes() {
-    try {
-        // Cargar Activas
-        const resActivas = await window.electronAPI.db.listarSolicitudes('activas');
-        if (resActivas.success && resActivas.solicitudes) {
-            const tbody = document.getElementById('table-body-bandeja');
-            if (tbody) {
-                tbody.innerHTML = resActivas.solicitudes.length === 0
-                    ? `<tr><td colspan="5" class="text-center p-8 text-slate-500">No hay trámites activos.</td></tr>`
-                    : resActivas.solicitudes.map(s => `
-                    <tr class="hover:bg-white/5 transition-colors">
-                        <td class="px-6 py-4">${new Date(s.created_at).toLocaleDateString()}</td>
-                        <td class="px-6 py-4 font-bold text-white">${s.proveedores?.nombre_razon_social || '-'}</td>
-                        <td class="px-6 py-4 font-bold text-emerald-400">S/ ${s.monto.toFixed(2)}</td>
-                        <td class="px-6 py-4">
-                            <span class="px-2 py-1 rounded text-[10px] font-bold tracking-wider ${s.estado === 'PENDIENTE' ? 'bg-amber-400/10 text-amber-400 border border-amber-400/20' :
-                            'bg-red-400/10 text-red-400 border border-red-400/20'
-                        }">
-                                ${s.estado}
-                            </span>
-                        </td>
-                        <td class="px-6 py-4 text-right">
-                            <button class="text-[10px] uppercase font-bold text-fluent-accent hover:underline">Revisar</button>
-                        </td>
-                    </tr>
-                `).join('');
-            }
-        }
-
-        // Cargar Historial
-        const resHistorial = await window.electronAPI.db.listarSolicitudes('historial');
-        if (resHistorial.success && resHistorial.solicitudes) {
-            const tbody = document.getElementById('table-body-historial');
-            if (tbody) {
-                tbody.innerHTML = resHistorial.solicitudes.length === 0
-                    ? `<tr><td colspan="5" class="text-center p-8 text-slate-500">No hay registros en el historial.</td></tr>`
-                    : resHistorial.solicitudes.map(s => `
-                    <tr class="hover:bg-white/5 transition-colors">
-                        <td class="px-6 py-4">${new Date(s.updated_at).toLocaleDateString()}</td>
-                        <td class="px-6 py-4 font-bold text-white">${s.proveedores?.nombre_razon_social || '-'}</td>
-                        <td class="px-6 py-4">S/ ${s.monto.toFixed(2)}</td>
-                        <td class="px-6 py-4">
-                            <span class="px-2 py-1 rounded text-[10px] font-bold tracking-wider ${s.estado === 'APROBADO' ? 'bg-blue-400/10 text-blue-400 border border-blue-400/20' :
-                            s.estado === 'BANCARIZADO' ? 'bg-emerald-400/10 text-emerald-400 border border-emerald-400/20' :
-                                'bg-slate-400/10 text-slate-400 border border-slate-400/20'
-                        }">
-                                ${s.estado}
-                            </span>
-                        </td>
-                        <td class="px-6 py-4 text-right">
-                            <a href="${s.archivo_drive_url}" target="_blank" class="text-[10px] uppercase font-bold text-fluent-accent hover:underline">Ver Doc</a>
-                        </td>
-                    </tr>
-                `).join('');
-            }
-        }
-    } catch (err) {
-        console.error('Error al cargar solicitudes:', err);
+  dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('fluent-dropzone-active'); });
+  dropzone.addEventListener('dragleave', (e) => { e.preventDefault(); dropzone.classList.remove('fluent-dropzone-active'); });
+  dropzone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropzone.classList.remove('fluent-dropzone-active');
+    if (e.dataTransfer?.files) {
+      for (let i = 0; i < e.dataTransfer.files.length; i++) {
+        fileArray.files.push(e.dataTransfer.files[i]);
+      }
+      renderFileList(listId, fileArray.files, fileArray);
     }
+  });
 }
 
-// Evento Submit de Login
-if (loginForm) {
-    loginForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const correo = (document.getElementById('login-email') as HTMLInputElement).value.trim();
-        const contrasena = (document.getElementById('login-password') as HTMLInputElement).value;
+function renderFileList(listId: string, files: File[], fileArray: { files: File[] }) {
+  const list = document.getElementById(listId);
+  if (!list) return;
+  if (files.length === 0) { list.innerHTML = ''; return; }
+  list.innerHTML = files.map((f, idx) => `
+    <div class="flex items-center justify-between bg-white/5 p-2 rounded-lg">
+      <span class="text-xs text-slate-300 truncate">${f.name}</span>
+      <button type="button" class="btn-remove-file text-[10px] text-red-400 hover:text-red-300 ml-2" data-index="${idx}">Eliminar</button>
+    </div>
+  `).join('');
 
-        // UI Loading
-        if (loginBtn) loginBtn.disabled = true;
-        if (loginBtnText) loginBtnText.textContent = 'Verificando...';
-        if (loginBtnSpinner) loginBtnSpinner.classList.remove('hidden');
-        if (loginError) loginError.classList.add('hidden');
-
-        try {
-            const resultado = await window.electronAPI.auth.login(correo, contrasena);
-
-            if (resultado.success) {
-                mostrarApp(resultado.user);
-            } else {
-                if (loginError) {
-                    loginError.textContent = resultado.error || 'Credenciales inválidas';
-                    loginError.classList.remove('hidden');
-                }
-                // Reset UI
-                if (loginBtn) loginBtn.disabled = false;
-                if (loginBtnText) loginBtnText.textContent = 'Iniciar Sesión';
-                if (loginBtnSpinner) loginBtnSpinner.classList.add('hidden');
-            }
-        } catch (err: any) {
-            if (loginError) {
-                loginError.textContent = err.message || 'Error de conexión con el servicio';
-                loginError.classList.remove('hidden');
-            }
-            if (loginBtn) loginBtn.disabled = false;
-            if (loginBtnText) loginBtnText.textContent = 'Iniciar Sesión';
-            if (loginBtnSpinner) loginBtnSpinner.classList.add('hidden');
-        }
+  list.querySelectorAll('.btn-remove-file').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.getAttribute('data-index') || '0');
+      fileArray.files.splice(idx, 1);
+      renderFileList(listId, fileArray.files, fileArray);
     });
+  });
 }
 
-// Evento Cerrar Sesión
-if (logoutBtn) {
-    logoutBtn.addEventListener('click', async (e) => {
-        e.preventDefault();
-        const confirmacion = confirm('¿Deseas cerrar sesión en BancaFlow?');
-        if (confirmacion) {
-            try {
-                await window.electronAPI.auth.logout();
-                window.location.reload();
-            } catch (err) {
-                console.error('Error al cerrar sesión:', err);
-                window.location.reload();
-            }
-        }
-    });
+// --- MODAL HELPERS ---
+function openModal(id: string) {
+  const el = document.getElementById(id);
+  if (el) el.classList.remove('hidden');
 }
 
-// --- LÓGICA DE NAVEGACIÓN (SPA) ---
-const navLinks = document.querySelectorAll('.nav-link');
-const sections = document.querySelectorAll('section[id]');
+function closeModal(id: string) {
+  const el = document.getElementById(id);
+  if (el) el.classList.add('hidden');
+}
 
-navLinks.forEach(link => {
+// --- NAVEGACIÓN SPA ---
+function setupNavigation() {
+  const navLinks = document.querySelectorAll('.nav-link');
+  const sections = document.querySelectorAll('section[id]');
+  const titleEl = document.getElementById('current-view-title');
+
+  const titleMap: any = {
+    'view-dashboard': 'Dashboard General',
+    'view-mis-solicitudes': 'Mis Solicitudes',
+    'view-cfo-bandeja': 'Bandeja CFO',
+    'view-bancarizados': 'Solicitudes Bancarizadas',
+    'view-proveedores': 'Proveedores',
+    'view-bancos': 'Bancos',
+    'view-sedes': 'Sedes',
+    'view-usuarios': 'Gestión de Usuarios'
+  };
+
+  navLinks.forEach(link => {
     link.addEventListener('click', (e) => {
-        e.preventDefault();
-        const targetId = link.getAttribute('data-target');
+      e.preventDefault();
+      const targetId = link.getAttribute('data-target');
 
-        // Actualizar UI de navegación
-        navLinks.forEach(l => {
-            l.classList.remove('nav-link-active');
-            l.classList.add('nav-link-inactive');
-        });
-        link.classList.add('nav-link-active');
-        link.classList.remove('nav-link-inactive');
+      navLinks.forEach(l => {
+        l.classList.remove('nav-link-active');
+        l.classList.add('nav-link-inactive');
+      });
+      link.classList.add('nav-link-active');
+      link.classList.remove('nav-link-inactive');
 
-        // Actualizar Título de la Vista Actual en Header
-        const titleMap: any = {
-            'view-dashboard': 'Dashboard General',
-            'view-nueva-solicitud': 'Registrar Pago',
-            'view-historial': 'Historial de Transacciones'
-        };
-        const titleEl = document.getElementById('current-view-title');
-        if (titleEl && targetId) titleEl.textContent = titleMap[targetId] || 'BancaFlow';
+      if (titleEl && targetId) titleEl.textContent = titleMap[targetId] || 'BancaFlow';
 
-        // Cambiar sección visible
-        sections.forEach(section => {
-            if (section.id === targetId) {
-                section.classList.remove('hidden');
-            } else {
-                section.classList.add('hidden');
-            }
-        });
+      sections.forEach(section => {
+        if (section.id === targetId) section.classList.remove('hidden');
+        else section.classList.add('hidden');
+      });
     });
-});
+  });
+}
 
-// --- LÓGICA DE DETRACCIONES (Regla: > 700 Soles) ---
-const inputMonto = document.getElementById('input-monto') as HTMLInputElement;
-const alertDetraccion = document.getElementById('alert-detraccion');
+// --- EVENTOS ---
+function setupEventListeners() {
+  // Login
+  loginForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const correo = (document.getElementById('login-email') as HTMLInputElement).value.trim();
+    const contrasena = (document.getElementById('login-password') as HTMLInputElement).value;
+    if (loginBtn) loginBtn.disabled = true;
+    if (loginBtnText) loginBtnText.textContent = 'Verificando...';
+    if (loginBtnSpinner) loginBtnSpinner.classList.remove('hidden');
+    if (loginError) loginError.classList.add('hidden');
 
-if (inputMonto && alertDetraccion) {
-    inputMonto.addEventListener('input', () => {
-        const monto = parseFloat(inputMonto.value);
-        if (monto > 700) {
-            alertDetraccion.classList.remove('hidden');
-        } else {
-            alertDetraccion.classList.add('hidden');
+    try {
+      const resultado = await window.electronAPI.auth.login(correo, contrasena);
+      if (resultado.success) {
+        mostrarApp(resultado.user);
+      } else {
+        if (loginError) {
+          loginError.textContent = resultado.error || 'Credenciales inválidas';
+          loginError.classList.remove('hidden');
         }
-    });
-}
-
-// --- LÓGICA DE ARCHIVOS (Drag & Drop) ---
-let currentFile: File | null = null;
-const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB
-
-const dropzone = document.getElementById('dropzone');
-const fileInput = document.getElementById('file-input') as HTMLInputElement;
-const dropzoneBrowse = document.getElementById('dropzone-browse');
-const filePreview = document.getElementById('file-preview');
-const filePreviewName = document.getElementById('file-preview-name');
-const filePreviewSize = document.getElementById('file-preview-size');
-const fileRemoveBtn = document.getElementById('file-remove-btn');
-
-function formatBytes(bytes: number, decimals = 2) {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const dm = decimals < 0 ? 0 : decimals;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
-}
-
-function handleFileSelection(file: File) {
-    if (!file) return;
-
-    // Validar tamaño
-    if (file.size > MAX_FILE_SIZE) {
-        alert('El archivo es demasiado grande. El máximo permitido es 25MB.');
-        return;
+        if (loginBtn) loginBtn.disabled = false;
+        if (loginBtnText) loginBtnText.textContent = 'Iniciar Sesión';
+        if (loginBtnSpinner) loginBtnSpinner.classList.add('hidden');
+      }
+    } catch (err: any) {
+      if (loginError) {
+        loginError.textContent = err.message || 'Error de conexión';
+        loginError.classList.remove('hidden');
+      }
+      if (loginBtn) loginBtn.disabled = false;
+      if (loginBtnText) loginBtnText.textContent = 'Iniciar Sesión';
+      if (loginBtnSpinner) loginBtnSpinner.classList.add('hidden');
     }
+  });
 
-    currentFile = file;
-
-    // Actualizar UI
-    if (dropzone) dropzone.classList.add('hidden');
-    if (filePreview) filePreview.classList.remove('hidden');
-    if (filePreviewName) filePreviewName.textContent = file.name;
-    if (filePreviewSize) filePreviewSize.textContent = formatBytes(file.size);
-}
-
-function clearFile() {
-    currentFile = null;
-    if (fileInput) fileInput.value = '';
-    if (filePreview) filePreview.classList.add('hidden');
-    if (dropzone) dropzone.classList.remove('hidden');
-}
-
-if (dropzone && fileInput && dropzoneBrowse) {
-    // Click en la zona abre el input
-    dropzoneBrowse.addEventListener('click', () => fileInput.click());
-    dropzone.addEventListener('click', (e) => {
-        if (e.target !== dropzoneBrowse) fileInput.click();
-    });
-
-    // File input change
-    fileInput.addEventListener('change', (e: any) => {
-        if (e.target.files && e.target.files.length > 0) {
-            handleFileSelection(e.target.files[0]);
-        }
-    });
-
-    // Drag & Drop
-    dropzone.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        dropzone.classList.add('fluent-dropzone-active');
-    });
-    dropzone.addEventListener('dragleave', (e) => {
-        e.preventDefault();
-        dropzone.classList.remove('fluent-dropzone-active');
-    });
-    dropzone.addEventListener('drop', (e) => {
-        e.preventDefault();
-        dropzone.classList.remove('fluent-dropzone-active');
-        if (e.dataTransfer && e.dataTransfer.files.length > 0) {
-            handleFileSelection(e.dataTransfer.files[0]);
-        }
-    });
-}
-
-if (fileRemoveBtn) {
-    fileRemoveBtn.addEventListener('click', clearFile);
-}
-
-// --- LÓGICA DE SUBMIT (Formulario) ---
-const solicitudForm = document.getElementById('solicitud-form') as HTMLFormElement;
-const inputProveedor = document.getElementById('input-proveedor') as HTMLInputElement;
-const inputDescripcion = document.getElementById('input-descripcion') as HTMLTextAreaElement;
-const btnSubmit = document.getElementById('solicitud-btn') as HTMLButtonElement;
-const btnSubmitText = document.getElementById('solicitud-btn-text');
-const btnSubmitSpinner = document.getElementById('solicitud-btn-spinner');
-
-const uploadProgress = document.getElementById('upload-progress');
-const progressBarFill = document.getElementById('progress-bar-fill');
-const progressText = document.getElementById('progress-text');
-const submitSuccess = document.getElementById('submit-success');
-const submitError = document.getElementById('submit-error');
-const submitErrorText = document.getElementById('submit-error-text');
-
-function setProgress(percent: number, text: string) {
-    if (uploadProgress) uploadProgress.classList.remove('hidden');
-    if (progressBarFill) progressBarFill.style.width = `${percent}%`;
-    if (progressText) progressText.textContent = text;
-}
-
-function resetSubmitUI() {
-    if (btnSubmit) btnSubmit.disabled = false;
-    if (btnSubmitText) btnSubmitText.textContent = 'Enviar Solicitud';
-    if (btnSubmitSpinner) btnSubmitSpinner.classList.add('hidden');
-    if (uploadProgress) uploadProgress.classList.add('hidden');
-}
-
-if (solicitudForm) {
-    solicitudForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-
-        if (!currentFile) {
-            alert('Por favor, adjunte el sustento digital (PDF o imagen).');
-            return;
-        }
-
-        const montoStr = inputMonto.value;
-        const monto = parseFloat(montoStr);
-        if (isNaN(monto) || monto <= 0) {
-            alert('El monto debe ser mayor a 0.');
-            return;
-        }
-
-        const requiereDetraccion = monto > 700;
-
-        // UI Loading
-        if (btnSubmit) btnSubmit.disabled = true;
-        if (btnSubmitText) btnSubmitText.textContent = 'Procesando...';
-        if (btnSubmitSpinner) btnSubmitSpinner.classList.remove('hidden');
-        if (submitSuccess) submitSuccess.classList.add('hidden');
-        if (submitError) submitError.classList.add('hidden');
-
-        try {
-            setProgress(10, 'Preparando archivo...');
-
-            // 1. Leer archivo y convertir a Base64
-            const base64Data = await new Promise<string>((resolve, reject) => {
-                const reader = new FileReader();
-                reader.readAsDataURL(currentFile!);
-                reader.onload = () => {
-                    const result = reader.result as string;
-                    // Remover "data:image/png;base64,"
-                    const b64 = result.split(',')[1];
-                    resolve(b64);
-                };
-                reader.onerror = error => reject(error);
-            });
-
-            setProgress(40, 'Comprimiendo y subiendo a Google Drive...');
-
-            // 2. Subir a Drive usando la función optimizada
-            const driveRes = await window.electronAPI.drive.uploadOptimized(
-                currentFile.name,
-                currentFile.type,
-                base64Data
-            );
-
-            if (!driveRes.success) {
-                throw new Error(driveRes.error || 'Error al subir a Drive');
-            }
-
-            setProgress(80, 'Registrando en Base de Datos...');
-
-            // 3. Guardar en Supabase
-            const dbRes = await window.electronAPI.db.crearSolicitud({
-                proveedorId: inputProveedor.value, // Es el ID ahora
-                descripcion: inputDescripcion.value.trim(),
-                monto: monto,
-                requiereDetraccion: requiereDetraccion,
-                archivoNombre: driveRes.file.name,
-                archivoDriveId: driveRes.file.id,
-                archivoDriveUrl: driveRes.file.webViewLink
-            });
-
-            if (!dbRes.success) {
-                throw new Error(dbRes.error || 'Error al guardar en Supabase');
-            }
-
-            setProgress(100, '¡Completado!');
-
-            // 4. Éxito
-            resetSubmitUI();
-            if (submitSuccess) submitSuccess.classList.remove('hidden');
-
-            // Limpiar formulario después de éxito
-            solicitudForm.reset();
-            clearFile();
-            if (alertDetraccion) alertDetraccion.classList.add('hidden');
-
-            setTimeout(() => {
-                if (submitSuccess) submitSuccess.classList.add('hidden');
-                // Opcional: Redirigir a Historial
-                const historialLink = document.querySelector('[data-target="view-historial"]') as HTMLElement;
-                if (historialLink) historialLink.click();
-            }, 3000);
-
-        } catch (err: any) {
-            console.error('Submit Error:', err);
-            resetSubmitUI();
-            if (submitErrorText) submitErrorText.textContent = err.message || 'Ocurrió un error inesperado.';
-            if (submitError) submitError.classList.remove('hidden');
-        }
-    });
-}
-
-// --- LOGICA DE MODALES (PROVEEDORES Y USUARIOS) ---
-const modalProveedor = document.getElementById('modal-proveedor');
-const formNuevoProveedor = document.getElementById('form-nuevo-proveedor') as HTMLFormElement;
-const btnShowNuevoProveedor = document.getElementById('btn-show-nuevo-proveedor');
-const btnAddProveedor = document.getElementById('btn-add-proveedor');
-const btnCancelProveedor = document.getElementById('btn-cancel-proveedor');
-
-const modalUsuario = document.getElementById('modal-usuario');
-const formNuevoUsuario = document.getElementById('form-nuevo-usuario') as HTMLFormElement;
-const btnAddUsuario = document.getElementById('btn-add-usuario');
-const btnCancelUsuario = document.getElementById('btn-cancel-usuario');
-
-function openModal(modal: HTMLElement | null) {
-    if (modal) {
-        modal.classList.remove('hidden');
+  // Logout
+  logoutBtn?.addEventListener('click', async () => {
+    if (confirm('¿Cerrar sesión en BancaFlow?')) {
+      await window.electronAPI.auth.logout();
+      window.location.reload();
     }
-}
+  });
 
-function closeModal(modal: HTMLElement | null) {
-    if (modal) {
-        modal.classList.add('hidden');
+  // Monto → detracción
+  document.getElementById('input-monto')?.addEventListener('input', () => {
+    const monto = parseFloat((document.getElementById('input-monto') as HTMLInputElement).value);
+    const alert = document.getElementById('alert-detraccion');
+    if (alert) {
+      if (monto > 700) alert.classList.remove('hidden'); else alert.classList.add('hidden');
     }
+  });
+
+  // Botón Nueva Solicitud
+  document.getElementById('btn-nueva-solicitud')?.addEventListener('click', () => abrirModalSolicitud(null));
+
+  // Form Solicitud
+  document.getElementById('form-solicitud')?.addEventListener('submit', submitSolicitud);
+  document.getElementById('btn-cancel-solicitud')?.addEventListener('click', () => closeModal('modal-solicitud'));
+
+  // Form Observar
+  document.getElementById('form-observar')?.addEventListener('submit', submitObservar);
+  document.getElementById('btn-cancel-observar')?.addEventListener('click', () => closeModal('modal-observar'));
+
+  // Form Bancarizar
+  document.getElementById('form-bancarizar')?.addEventListener('submit', submitBancarizar);
+  document.getElementById('btn-cancel-bancarizar')?.addEventListener('click', () => closeModal('modal-bancarizar'));
+
+  // Form Proveedor
+  document.getElementById('form-proveedor')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = (e.target as HTMLFormElement).querySelector('button[type="submit"]') as HTMLButtonElement;
+    btn.disabled = true; btn.textContent = 'Guardando...';
+    const datos = {
+      nombre_razon_social: (document.getElementById('prov-nombre') as HTMLInputElement).value.trim(),
+      correo: (document.getElementById('prov-correo') as HTMLInputElement).value.trim() || null,
+      banco_id: (document.getElementById('prov-banco-id') as HTMLSelectElement).value || null,
+      numero_cuenta: (document.getElementById('prov-cuenta') as HTMLInputElement).value.trim() || null,
+      sede_id: (document.getElementById('prov-sede-id') as HTMLSelectElement).value || null,
+      cci: (document.getElementById('prov-cci') as HTMLInputElement).value.trim() || null,
+    };
+    try {
+      const res = await window.electronAPI.db.crearProveedor(datos);
+      if (res.success) {
+        closeModal('modal-proveedor');
+        (document.getElementById('form-proveedor') as HTMLFormElement).reset();
+        await cargarProveedores();
+      } else { alert('Error: ' + res.error); }
+    } catch (err: any) { alert('Error: ' + err.message); }
+    finally { btn.disabled = false; btn.textContent = 'Guardar'; }
+  });
+  document.getElementById('btn-add-proveedor')?.addEventListener('click', () => openModal('modal-proveedor'));
+  document.getElementById('btn-cancel-proveedor')?.addEventListener('click', () => closeModal('modal-proveedor'));
+
+  // Form Banco
+  document.getElementById('form-banco')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const nombre = (document.getElementById('banco-nombre') as HTMLInputElement).value.trim();
+    if (!nombre) return;
+    const res = await window.electronAPI.db.crearBanco(nombre);
+    if (res.success) {
+      closeModal('modal-banco');
+      (document.getElementById('form-banco') as HTMLFormElement).reset();
+      await Promise.all([cargarBancos(), cargarProveedores()]);
+    } else { alert('Error: ' + res.error); }
+  });
+  document.getElementById('btn-add-banco')?.addEventListener('click', () => openModal('modal-banco'));
+  document.getElementById('btn-cancel-banco')?.addEventListener('click', () => closeModal('modal-banco'));
+
+  // Form Sede
+  document.getElementById('form-sede')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const nombre = (document.getElementById('sede-nombre') as HTMLInputElement).value.trim();
+    if (!nombre) return;
+    const res = await window.electronAPI.db.crearSede(nombre);
+    if (res.success) {
+      closeModal('modal-sede');
+      (document.getElementById('form-sede') as HTMLFormElement).reset();
+      await Promise.all([cargarSedes(), cargarProveedores()]);
+    } else { alert('Error: ' + res.error); }
+  });
+  document.getElementById('btn-add-sede')?.addEventListener('click', () => openModal('modal-sede'));
+  document.getElementById('btn-cancel-sede')?.addEventListener('click', () => closeModal('modal-sede'));
+
+  // Form Usuario
+  document.getElementById('form-usuario')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = (e.target as HTMLFormElement).querySelector('button[type="submit"]') as HTMLButtonElement;
+    btn.disabled = true; btn.textContent = 'Guardando...';
+    const datos = {
+      nombre: (document.getElementById('usr-nombre') as HTMLInputElement).value.trim(),
+      apellido: (document.getElementById('usr-apellido') as HTMLInputElement).value.trim(),
+      correo: (document.getElementById('usr-correo') as HTMLInputElement).value.trim(),
+      contrasena: (document.getElementById('usr-contrasena') as HTMLInputElement).value,
+      rol: (document.getElementById('usr-rol') as HTMLSelectElement).value,
+    };
+    try {
+      const res = await window.electronAPI.auth.crearUsuario(datos);
+      if (res.success) {
+        closeModal('modal-usuario');
+        (document.getElementById('form-usuario') as HTMLFormElement).reset();
+        await cargarUsuarios();
+      } else { alert('Error: ' + res.error); }
+    } catch (err: any) { alert('Error: ' + err.message); }
+    finally { btn.disabled = false; btn.textContent = 'Guardar'; }
+  });
+  document.getElementById('btn-add-usuario')?.addEventListener('click', () => openModal('modal-usuario'));
+  document.getElementById('btn-cancel-usuario')?.addEventListener('click', () => closeModal('modal-usuario'));
 }
 
-// Proveedores
-if (btnShowNuevoProveedor) btnShowNuevoProveedor.addEventListener('click', () => openModal(modalProveedor));
-if (btnAddProveedor) btnAddProveedor.addEventListener('click', () => openModal(modalProveedor));
-if (btnCancelProveedor) btnCancelProveedor.addEventListener('click', () => closeModal(modalProveedor));
-
-if (formNuevoProveedor) {
-    formNuevoProveedor.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const btn = formNuevoProveedor.querySelector('button[type="submit"]') as HTMLButtonElement;
-        const originalText = btn.textContent;
-        btn.textContent = 'Guardando...';
-        btn.disabled = true;
-
-        const datos = {
-            nombre_razon_social: (document.getElementById('prov-nombre') as HTMLInputElement).value.trim(),
-            correo: (document.getElementById('prov-correo') as HTMLInputElement).value.trim() || null,
-            banco: (document.getElementById('prov-banco') as HTMLInputElement).value.trim() || null,
-            numero_cuenta: (document.getElementById('prov-cuenta') as HTMLInputElement).value.trim() || null,
-            cci: (document.getElementById('prov-cci') as HTMLInputElement).value.trim() || null,
-        };
-
-        try {
-            const res = await window.electronAPI.db.crearProveedor(datos);
-            if (res.success) {
-                closeModal(modalProveedor);
-                formNuevoProveedor.reset();
-                cargarProveedores(); // Recargar datos
-            } else {
-                alert('Error al crear proveedor: ' + res.error);
-            }
-        } catch (err: any) {
-            alert('Error: ' + err.message);
-        } finally {
-            btn.textContent = originalText;
-            btn.disabled = false;
-        }
-    });
+// --- FILE DROPZONES ---
+function setupDropzones() {
+  setupFileDropzone('dropzone-solicitud', 'file-input-solicitud', 'dropzone-browse-solicitud', 'file-list-solicitud', { files: solicitudFiles });
+  setupFileDropzone('dropzone-bancarizar', 'file-input-bancarizar', 'dropzone-browse-bancarizar', 'file-list-bancarizar', { files: bancarizarFiles });
 }
 
-// Usuarios
-if (btnAddUsuario) btnAddUsuario.addEventListener('click', () => openModal(modalUsuario));
-if (btnCancelUsuario) btnCancelUsuario.addEventListener('click', () => closeModal(modalUsuario));
-
-if (formNuevoUsuario) {
-    formNuevoUsuario.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const btn = formNuevoUsuario.querySelector('button[type="submit"]') as HTMLButtonElement;
-        const originalText = btn.textContent;
-        btn.textContent = 'Guardando...';
-        btn.disabled = true;
-
-        const datos = {
-            nombre: (document.getElementById('usr-nombre') as HTMLInputElement).value.trim(),
-            apellido: (document.getElementById('usr-apellido') as HTMLInputElement).value.trim(),
-            correo: (document.getElementById('usr-correo') as HTMLInputElement).value.trim(),
-            contrasena: (document.getElementById('usr-contrasena') as HTMLInputElement).value,
-            rol: (document.getElementById('usr-rol') as HTMLSelectElement).value,
-        };
-
-        try {
-            const res = await window.electronAPI.auth.crearUsuario(datos);
-            if (res.success) {
-                closeModal(modalUsuario);
-                formNuevoUsuario.reset();
-                cargarUsuarios(); // Recargar datos
-            } else {
-                alert('Error al crear usuario: ' + res.error);
-            }
-        } catch (err: any) {
-            alert('Error: ' + err.message);
-        } finally {
-            btn.textContent = originalText;
-            btn.disabled = false;
-        }
-    });
+// --- INIT ---
+function init() {
+  setupNavigation();
+  setupEventListeners();
+  setupDropzones();
+  verificarSesion();
+  console.log('BancaFlow v2 Renderer initialized');
 }
 
-// Verificar sesión al inicio
-verificarSesion();
-
-console.log('BancaFlow Renderer Initialized with File Pipeline');
-
+init();

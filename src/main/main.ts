@@ -6,7 +6,6 @@ import { google } from 'googleapis';
 import { Readable } from 'stream';
 import sharp from 'sharp';
 
-// Cargar variables de entorno
 dotenv.config();
 
 const supabaseUrl = process.env.SUPABASE_URL || '';
@@ -17,7 +16,6 @@ const googleEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || '';
 const googlePrivateKey = process.env.GOOGLE_PRIVATE_KEY || '';
 const googleFolderId = process.env.GOOGLE_DRIVE_FOLDER_ID || '';
 
-// Inicializar Google Drive API con resiliencia
 let drive: any = null;
 let driveErrorMsg = '';
 
@@ -39,7 +37,6 @@ if (!googleEmail || !googlePrivateKey || !googleFolderId) {
   }
 }
 
-// Inicializar Supabase en Capa Segura con resiliencia
 let supabase: any = null;
 let supabaseAdmin: any = null;
 let supabaseErrorMsg = '';
@@ -69,11 +66,11 @@ function createWindow() {
     height: 750,
     minWidth: 900,
     minHeight: 600,
-    titleBarStyle: 'hidden', // Estilo Fluent para barra de título
+    titleBarStyle: 'hidden',
     titleBarOverlay: {
-      color: 'rgba(0, 0, 0, 0)', // Totalmente transparente
-      symbolColor: '#ffffff', // Controles blancos para alto contraste sobre cristal oscuro
-      height: 40 // Altura estándar para botones de Windows 11
+      color: 'rgba(0, 0, 0, 0)',
+      symbolColor: '#ffffff',
+      height: 40
     },
     transparent: true,
     vibrancy: 'sidebar',
@@ -93,7 +90,69 @@ function createWindow() {
   });
 }
 
-// Configurar los manejadores IPC para la autenticación segura (Fase 2)
+async function uploadToDrive(buffer: Buffer, mimeType: string, fileName: string): Promise<{ success: boolean; file?: any; error?: string }> {
+  if (!drive) {
+    return { success: false, error: driveErrorMsg || 'Servicio de Google Drive no configurado.' };
+  }
+  try {
+    let finalBuffer = buffer;
+    let finalMimeType = mimeType;
+    let finalName = fileName;
+
+    if (mimeType.startsWith('image/')) {
+      finalBuffer = await sharp(buffer)
+        .resize({ width: 1200, withoutEnlargement: true })
+        .webp({ quality: 60 })
+        .toBuffer();
+      finalMimeType = 'image/webp';
+      finalName = fileName.replace(/\.[^.]+$/, '.webp');
+    }
+
+    const media = {
+      mimeType: finalMimeType,
+      body: Readable.from(finalBuffer),
+    };
+    const fileMetadata = {
+      name: finalName,
+      parents: [googleFolderId],
+    };
+    const response = await drive.files.create({
+      requestBody: fileMetadata,
+      media: media,
+      fields: 'id, name, webViewLink, webContentLink',
+    });
+    return {
+      success: true,
+      file: {
+        id: response.data.id,
+        name: response.data.name,
+        webViewLink: response.data.webViewLink,
+        webContentLink: response.data.webContentLink,
+      }
+    };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Error al subir archivo a Google Drive' };
+  }
+}
+
+async function getCurrentUserRole(): Promise<string | null> {
+  const { data: sessionData } = await supabase.auth.getSession();
+  if (!sessionData.session) return null;
+  const { data: perfil } = await supabase
+    .from('perfiles')
+    .select('rol')
+    .eq('id', sessionData.session.user.id)
+    .single();
+  return perfil ? perfil.rol : null;
+}
+
+async function getCurrentUserId(): Promise<string | null> {
+  const { data: sessionData } = await supabase.auth.getSession();
+  return sessionData.session?.user?.id || null;
+}
+
+// --- AUTH ---
+
 ipcMain.handle('auth:login', async (_event, { correo, contrasena }) => {
   if (!supabase) {
     return { success: false, error: supabaseErrorMsg || 'Servicio de base de datos no configurado localmente.' };
@@ -103,12 +162,8 @@ ipcMain.handle('auth:login', async (_event, { correo, contrasena }) => {
       email: correo,
       password: contrasena,
     });
+    if (error) return { success: false, error: error.message };
 
-    if (error) {
-      return { success: false, error: error.message };
-    }
-
-    // Buscar el perfil en la tabla relacional
     const { data: perfil, error: perfilError } = await supabase
       .from('perfiles')
       .select('rol, nombre, apellido')
@@ -118,12 +173,7 @@ ipcMain.handle('auth:login', async (_event, { correo, contrasena }) => {
     if (perfilError) {
       return {
         success: true,
-        user: {
-          id: data.user?.id,
-          email: data.user?.email,
-          nombre: 'Usuario',
-          rol: 'RRHH'
-        }
+        user: { id: data.user?.id, email: data.user?.email, nombre: 'Usuario', rol: 'RRHH' }
       };
     }
 
@@ -168,141 +218,6 @@ ipcMain.handle('auth:get-session', async () => {
   };
 });
 
-// Manejadores IPC para Google Drive Bridge
-ipcMain.handle('drive:test-connection', async () => {
-  if (!drive) {
-    return { success: false, error: driveErrorMsg || 'Servicio de Google Drive no configurado.' };
-  }
-  try {
-    const response = await drive.files.get({
-      fileId: googleFolderId,
-      fields: 'id, name, mimeType',
-    });
-    return {
-      success: true,
-      folder: {
-        id: response.data.id,
-        name: response.data.name,
-      }
-    };
-  } catch (err: any) {
-    return { success: false, error: err.message || 'Error de conexión con Google Drive' };
-  }
-});
-
-ipcMain.handle('drive:upload', async (_event, { name, mimeType, base64Data }) => {
-  if (!drive) {
-    return { success: false, error: driveErrorMsg || 'Servicio de Google Drive no configurado.' };
-  }
-  try {
-    const buffer = Buffer.from(base64Data, 'base64');
-    const media = {
-      mimeType: mimeType,
-      body: Readable.from(buffer),
-    };
-    const fileMetadata = {
-      name: name,
-      parents: [googleFolderId],
-    };
-    const response = await drive.files.create({
-      requestBody: fileMetadata,
-      media: media,
-      fields: 'id, name, webViewLink, webContentLink',
-    });
-    return {
-      success: true,
-      file: {
-        id: response.data.id,
-        name: response.data.name,
-        webViewLink: response.data.webViewLink,
-        webContentLink: response.data.webContentLink,
-      }
-    };
-  } catch (err: any) {
-    return { success: false, error: err.message || 'Error al subir archivo a Google Drive' };
-  }
-});
-
-// Handler optimizado: Comprime imagen con Sharp antes de subir a Drive
-ipcMain.handle('drive:upload-optimized', async (_event, { name, mimeType, base64Data }) => {
-  if (!drive) {
-    return { success: false, error: driveErrorMsg || 'Servicio de Google Drive no configurado.' };
-  }
-  try {
-    let buffer: any = Buffer.from(base64Data, 'base64');
-    let finalMimeType = mimeType;
-    let finalName = name;
-
-    // Si es imagen, comprimir con Sharp a WebP
-    if (mimeType.startsWith('image/')) {
-      buffer = await sharp(buffer)
-        .resize({ width: 1200, withoutEnlargement: true })
-        .webp({ quality: 60 })
-        .toBuffer();
-      finalMimeType = 'image/webp';
-      // Cambiar extensión del nombre a .webp
-      finalName = name.replace(/\.[^.]+$/, '.webp');
-      console.log(`📦 Compresión: ${(base64Data.length * 0.75 / 1024).toFixed(1)}KB → ${(buffer.length / 1024).toFixed(1)}KB`);
-    }
-    // PDFs se suben sin modificar por ahora (pdf-lib para fase futura)
-
-    const media = {
-      mimeType: finalMimeType,
-      body: Readable.from(buffer),
-    };
-    const fileMetadata = {
-      name: finalName,
-      parents: [googleFolderId],
-    };
-    const response = await drive.files.create({
-      requestBody: fileMetadata,
-      media: media,
-      fields: 'id, name, webViewLink, webContentLink',
-    });
-    return {
-      success: true,
-      file: {
-        id: response.data.id,
-        name: response.data.name,
-        webViewLink: response.data.webViewLink,
-        webContentLink: response.data.webContentLink,
-      }
-    };
-  } catch (err: any) {
-    return { success: false, error: err.message || 'Error al procesar y subir archivo' };
-  }
-});
-
-// Manejadores IPC para Proveedores y Usuarios
-ipcMain.handle('db:crear-proveedor', async (_event, datos) => {
-  if (!supabase) return { success: false, error: supabaseErrorMsg || 'Base de datos no configurada.' };
-  try {
-    const { data, error } = await supabase
-      .from('proveedores')
-      .insert(datos)
-      .select()
-      .single();
-    if (error) return { success: false, error: error.message };
-    return { success: true, proveedor: data };
-  } catch (err: any) {
-    return { success: false, error: err.message || 'Error al crear proveedor' };
-  }
-});
-
-ipcMain.handle('db:listar-proveedores', async () => {
-  if (!supabase) return { success: false, error: supabaseErrorMsg || 'Base de datos no configurada.' };
-  try {
-    const { data, error } = await supabase
-      .from('proveedores')
-      .select('*')
-      .order('nombre_razon_social', { ascending: true });
-    if (error) return { success: false, error: error.message };
-    return { success: true, proveedores: data };
-  } catch (err: any) {
-    return { success: false, error: err.message || 'Error al listar proveedores' };
-  }
-});
-
 ipcMain.handle('auth:listar-usuarios', async () => {
   if (!supabaseAdmin) return { success: false, error: 'Falta SUPABASE_SERVICE_KEY en .env para esta acción.' };
   try {
@@ -312,7 +227,6 @@ ipcMain.handle('auth:listar-usuarios', async () => {
     const { data: perfilesData, error: perfilesError } = await supabaseAdmin.from('perfiles').select('*');
     if (perfilesError) return { success: false, error: perfilesError.message };
 
-    // Unir datos de auth con perfiles
     const usuarios = usersData.users.map((u: any) => {
       const perfil = perfilesData.find((p: any) => p.id === u.id);
       return {
@@ -341,14 +255,12 @@ ipcMain.handle('auth:crear-usuario', async (_event, datos) => {
     });
     if (error) return { success: false, error: error.message };
 
-    // Insertar en la tabla de perfiles (Admin lo puede hacer directamente)
     const { error: perfilError } = await supabaseAdmin.from('perfiles').insert({
       id: data.user.id,
       nombre: datos.nombre,
       apellido: datos.apellido,
       rol: datos.rol
     });
-
     if (perfilError) return { success: false, error: perfilError.message };
 
     return { success: true, user: data.user };
@@ -357,18 +269,124 @@ ipcMain.handle('auth:crear-usuario', async (_event, datos) => {
   }
 });
 
-// Manejadores IPC para Base de Datos (Solicitudes)
-ipcMain.handle('db:crear-solicitud', async (_event, datos) => {
-  if (!supabase) {
-    return { success: false, error: supabaseErrorMsg || 'Base de datos no configurada.' };
+// --- DRIVE ---
+
+ipcMain.handle('drive:test-connection', async () => {
+  if (!drive) {
+    return { success: false, error: driveErrorMsg || 'Servicio de Google Drive no configurado.' };
   }
   try {
-    // Obtener sesión activa para el usuario_id
-    const { data: sessionData } = await supabase.auth.getSession();
-    if (!sessionData.session) {
-      return { success: false, error: 'No hay sesión activa. Inicie sesión nuevamente.' };
-    }
-    const userId = sessionData.session.user.id;
+    const response = await drive.files.get({
+      fileId: googleFolderId,
+      fields: 'id, name, mimeType',
+    });
+    return {
+      success: true,
+      folder: { id: response.data.id, name: response.data.name }
+    };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Error de conexión con Google Drive' };
+  }
+});
+
+ipcMain.handle('drive:upload-file', async (_event, { name, mimeType, base64Data }) => {
+  const buffer = Buffer.from(base64Data, 'base64');
+  return await uploadToDrive(buffer, mimeType, name);
+});
+
+// --- BANCOS ---
+
+ipcMain.handle('db:listar-bancos', async () => {
+  if (!supabase) return { success: false, error: supabaseErrorMsg || 'Base de datos no configurada.' };
+  try {
+    const { data, error } = await supabase.from('bancos').select('*').order('nombre', { ascending: true });
+    if (error) return { success: false, error: error.message };
+    return { success: true, bancos: data };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Error al listar bancos' };
+  }
+});
+
+ipcMain.handle('db:crear-banco', async (_event, { nombre }) => {
+  if (!supabase) return { success: false, error: supabaseErrorMsg || 'Base de datos no configurada.' };
+  try {
+    const { data, error } = await supabase.from('bancos').insert({ nombre }).select().single();
+    if (error) return { success: false, error: error.message };
+    return { success: true, banco: data };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Error al crear banco' };
+  }
+});
+
+// --- SEDES ---
+
+ipcMain.handle('db:listar-sedes', async () => {
+  if (!supabase) return { success: false, error: supabaseErrorMsg || 'Base de datos no configurada.' };
+  try {
+    const { data, error } = await supabase.from('sedes').select('*').order('nombre', { ascending: true });
+    if (error) return { success: false, error: error.message };
+    return { success: true, sedes: data };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Error al listar sedes' };
+  }
+});
+
+ipcMain.handle('db:crear-sede', async (_event, { nombre }) => {
+  if (!supabase) return { success: false, error: supabaseErrorMsg || 'Base de datos no configurada.' };
+  try {
+    const { data, error } = await supabase.from('sedes').insert({ nombre }).select().single();
+    if (error) return { success: false, error: error.message };
+    return { success: true, sede: data };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Error al crear sede' };
+  }
+});
+
+// --- PROVEEDORES ---
+
+ipcMain.handle('db:listar-proveedores', async () => {
+  if (!supabase) return { success: false, error: supabaseErrorMsg || 'Base de datos no configurada.' };
+  try {
+    const { data, error } = await supabase
+      .from('proveedores')
+      .select(`*, bancos:banco_id (nombre), sedes:sede_id (nombre)`)
+      .order('nombre_razon_social', { ascending: true });
+    if (error) return { success: false, error: error.message };
+    return { success: true, proveedores: data };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Error al listar proveedores' };
+  }
+});
+
+ipcMain.handle('db:crear-proveedor', async (_event, datos) => {
+  if (!supabase) return { success: false, error: supabaseErrorMsg || 'Base de datos no configurada.' };
+  try {
+    const { data, error } = await supabase
+      .from('proveedores')
+      .insert({
+        nombre_razon_social: datos.nombre_razon_social,
+        correo: datos.correo || null,
+        banco_id: datos.banco_id || null,
+        numero_cuenta: datos.numero_cuenta || null,
+        sede_id: datos.sede_id || null,
+        cci: datos.cci || null,
+      })
+      .select(`*, bancos:banco_id (nombre), sedes:sede_id (nombre)`)
+      .single();
+    if (error) return { success: false, error: error.message };
+    return { success: true, proveedor: data };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Error al crear proveedor' };
+  }
+});
+
+// --- SOLICITUDES ---
+
+ipcMain.handle('db:crear-solicitud', async (_event, datos) => {
+  if (!supabase) return { success: false, error: supabaseErrorMsg || 'Base de datos no configurada.' };
+  try {
+    const userId = await getCurrentUserId();
+    if (!userId) return { success: false, error: 'No hay sesión activa. Inicie sesión nuevamente.' };
 
     const { data, error } = await supabase
       .from('solicitudes')
@@ -377,73 +395,111 @@ ipcMain.handle('db:crear-solicitud', async (_event, datos) => {
         proveedor_id: datos.proveedorId,
         descripcion: datos.descripcion,
         monto: datos.monto,
-        requiere_detraccion: datos.requiereDetraccion,
-        archivo_nombre: datos.archivoNombre,
-        archivo_drive_id: datos.archivoDriveId,
-        archivo_drive_url: datos.archivoDriveUrl,
+        requiere_detraccion: datos.requiereDetraccion || false,
+        archivos: datos.archivos || [],
         estado: 'PENDIENTE'
       })
-      .select()
+      .select(`*, proveedores:proveedor_id (nombre_razon_social)`)
       .single();
 
-    if (error) {
-      return { success: false, error: error.message };
-    }
+    if (error) return { success: false, error: error.message };
     return { success: true, solicitud: data };
   } catch (err: any) {
     return { success: false, error: err.message || 'Error al registrar solicitud' };
   }
 });
 
-ipcMain.handle('db:listar-solicitudes', async (_event, filtro) => {
-  if (!supabase) {
-    return { success: false, error: supabaseErrorMsg || 'Base de datos no configurada.' };
-  }
+ipcMain.handle('db:listar-solicitudes', async (_event, { vista, rol }) => {
+  if (!supabase) return { success: false, error: supabaseErrorMsg || 'Base de datos no configurada.' };
   try {
-    const { data: sessionData } = await supabase.auth.getSession();
-    if (!sessionData.session) {
-      return { success: false, error: 'No hay sesión activa.' };
-    }
-    const userId = sessionData.session.user.id;
-
-    // Verificar rol del usuario
-    const { data: perfil } = await supabase
-      .from('perfiles')
-      .select('rol')
-      .eq('id', userId)
-      .single();
+    const userId = await getCurrentUserId();
+    if (!userId) return { success: false, error: 'No hay sesión activa.' };
 
     let query = supabase
       .from('solicitudes')
-      .select(`
-        *,
-        perfiles:usuario_id (nombre, apellido),
-        proveedores:proveedor_id (nombre_razon_social)
-      `)
+      .select(`*, perfiles:usuario_id (nombre, apellido), proveedores:proveedor_id (nombre_razon_social)`)
       .order('created_at', { ascending: false });
 
-    // Lógica de Filtros (Bandeja vs Historial)
-    // - actives: PENDIENTE, OBSERVADO
-    // - history: APROBADO, BANCARIZADO, RECHAZADO
-    if (filtro === 'activas') {
+    if (vista === 'cfo-bandeja') {
       query = query.in('estado', ['PENDIENTE', 'OBSERVADO']);
-    } else if (filtro === 'historial') {
-      query = query.in('estado', ['APROBADO', 'BANCARIZADO', 'RECHAZADO']);
-    }
-
-    // Si NO es CFO ni ADMINISTRADOR, filtrar solo sus propias solicitudes
-    if (!perfil || (perfil.rol !== 'CFO' && perfil.rol !== 'ADMINISTRADOR')) {
-      query = query.eq('usuario_id', userId);
+    } else if (vista === 'bancarizados') {
+      query = query.eq('estado', 'BANCARIZADO');
+      if (rol !== 'CFO') {
+        query = query.eq('usuario_id', userId);
+      }
+    } else if (vista === 'mis-solicitudes') {
+      query = query.in('estado', ['PENDIENTE', 'OBSERVADO']).eq('usuario_id', userId);
+    } else if (vista === 'mis-bancarizados') {
+      query = query.eq('estado', 'BANCARIZADO').eq('usuario_id', userId);
     }
 
     const { data, error } = await query;
-
-    if (error) {
-      return { success: false, error: error.message };
-    }
+    if (error) return { success: false, error: error.message };
     return { success: true, solicitudes: data || [] };
   } catch (err: any) {
     return { success: false, error: err.message || 'Error al obtener solicitudes' };
+  }
+});
+
+ipcMain.handle('db:observar-solicitud', async (_event, { id, motivo }) => {
+  if (!supabase) return { success: false, error: supabaseErrorMsg || 'Base de datos no configurada.' };
+  try {
+    const { data, error } = await supabase
+      .from('solicitudes')
+      .update({ estado: 'OBSERVADO', observacion_motivo: motivo })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) return { success: false, error: error.message };
+    return { success: true, solicitud: data };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Error al observar solicitud' };
+  }
+});
+
+ipcMain.handle('db:bancarizar-solicitud', async (_event, { id, evidencias }) => {
+  if (!supabase) return { success: false, error: supabaseErrorMsg || 'Base de datos no configurada.' };
+  try {
+    const userId = await getCurrentUserId();
+    const { data, error } = await supabase
+      .from('solicitudes')
+      .update({
+        estado: 'BANCARIZADO',
+        evidencias_bancarizacion: evidencias,
+        bancarizado_por: userId
+      })
+      .eq('id', id)
+      .select(`*, proveedores:proveedor_id (nombre_razon_social)`)
+      .single();
+
+    if (error) return { success: false, error: error.message };
+    return { success: true, solicitud: data };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Error al bancarizar solicitud' };
+  }
+});
+
+ipcMain.handle('db:actualizar-solicitud', async (_event, { id, descripcion, proveedorId, monto, archivos }) => {
+  if (!supabase) return { success: false, error: supabaseErrorMsg || 'Base de datos no configurada.' };
+  try {
+    const updateData: any = { estado: 'PENDIENTE', observacion_motivo: null };
+    if (descripcion !== undefined) updateData.descripcion = descripcion;
+    if (proveedorId !== undefined) updateData.proveedor_id = proveedorId;
+    if (monto !== undefined) updateData.monto = monto;
+    if (archivos !== undefined) updateData.archivos = archivos;
+
+    const { data, error } = await supabase
+      .from('solicitudes')
+      .update(updateData)
+      .eq('id', id)
+      .select(`*, proveedores:proveedor_id (nombre_razon_social)`)
+      .single();
+
+    if (error) return { success: false, error: error.message };
+    return { success: true, solicitud: data };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Error al actualizar solicitud' };
   }
 });
 

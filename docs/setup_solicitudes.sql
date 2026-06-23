@@ -1,23 +1,38 @@
 -- ==========================================
--- SCRIPT DE CONFIGURACIÓN BÁSICA - BANCAFLOW
+-- SCRIPT DE CONFIGURACIÓN - BANCAFLOW v2
 -- ==========================================
 -- IMPORTANTE: Ejecutar esto en el SQL Editor de Supabase
 
--- 1. Habilitar la extensión UUID si no existe
+-- 1. Habilitar extensión UUID
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- 2. Crear tabla de PROVEEDORES
+-- 2. TABLA BANCOS
+CREATE TABLE IF NOT EXISTS public.bancos (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    nombre TEXT NOT NULL UNIQUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- 3. TABLA SEDES
+CREATE TABLE IF NOT EXISTS public.sedes (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    nombre TEXT NOT NULL UNIQUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- 4. TABLA PROVEEDORES (modificada)
 CREATE TABLE IF NOT EXISTS public.proveedores (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     nombre_razon_social TEXT NOT NULL,
     correo TEXT,
-    banco TEXT,
-    cuenta_bancaria TEXT,
+    banco_id UUID REFERENCES public.bancos(id),
+    numero_cuenta TEXT,
+    sede_id UUID REFERENCES public.sedes(id),
     cci TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 3. Crear tabla de SOLICITUDES
+-- 5. TABLA SOLICITUDES (modificada)
 CREATE TABLE IF NOT EXISTS public.solicitudes (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     usuario_id UUID NOT NULL REFERENCES auth.users(id),
@@ -25,82 +40,75 @@ CREATE TABLE IF NOT EXISTS public.solicitudes (
     descripcion TEXT NOT NULL,
     monto NUMERIC(10, 2) NOT NULL,
     requiere_detraccion BOOLEAN DEFAULT false,
-    archivo_nombre TEXT NOT NULL,
-    archivo_drive_id TEXT NOT NULL,
-    archivo_drive_url TEXT NOT NULL,
-    estado TEXT NOT NULL DEFAULT 'PENDIENTE' CHECK (estado IN ('PENDIENTE', 'OBSERVADO', 'APROBADO', 'BANCARIZADO', 'RECHAZADO')),
-    observacion_motivo TEXT, -- Para cuando el CFO devuelva la solicitud
+    archivos JSONB NOT NULL DEFAULT '[]'::jsonb,
+    estado TEXT NOT NULL DEFAULT 'PENDIENTE' CHECK (estado IN ('PENDIENTE', 'OBSERVADO', 'BANCARIZADO', 'RECHAZADO')),
+    observacion_motivo TEXT,
+    evidencias_bancarizacion JSONB DEFAULT '[]'::jsonb,
+    bancarizado_por UUID REFERENCES auth.users(id),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 4. SEGURIDAD (Row Level Security)
+-- 6. SEGURIDAD (Row Level Security)
+ALTER TABLE public.bancos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.sedes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.proveedores ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.solicitudes ENABLE ROW LEVEL SECURITY;
 
--- 5. POLÍTICAS PROVEEDORES
--- Todos los usuarios autenticados pueden ver proveedores
-CREATE POLICY "Cualquiera autenticado puede ver proveedores"
-    ON public.proveedores FOR SELECT
-    TO authenticated
-    USING (true);
+-- 7. POLÍTICAS BANCOS
+CREATE POLICY "Usuarios autenticados pueden ver bancos"
+    ON public.bancos FOR SELECT TO authenticated USING (true);
 
--- Todos los usuarios autenticados pueden insertar proveedores
-CREATE POLICY "Cualquiera autenticado puede insertar proveedores"
-    ON public.proveedores FOR INSERT
-    TO authenticated
-    WITH CHECK (true);
+CREATE POLICY "Admin puede insertar bancos"
+    ON public.bancos FOR INSERT TO authenticated
+    WITH CHECK (EXISTS (SELECT 1 FROM perfiles WHERE id = auth.uid() AND rol = 'ADMINISTRADOR'));
 
--- 6. POLÍTICAS SOLICITUDES
--- Los usuarios solo pueden ver SUS PROPIAS solicitudes
+CREATE POLICY "Admin puede actualizar bancos"
+    ON public.bancos FOR UPDATE TO authenticated
+    USING (EXISTS (SELECT 1 FROM perfiles WHERE id = auth.uid() AND rol = 'ADMINISTRADOR'));
+
+-- 8. POLÍTICAS SEDES
+CREATE POLICY "Usuarios autenticados pueden ver sedes"
+    ON public.sedes FOR SELECT TO authenticated USING (true);
+
+CREATE POLICY "Admin puede insertar sedes"
+    ON public.sedes FOR INSERT TO authenticated
+    WITH CHECK (EXISTS (SELECT 1 FROM perfiles WHERE id = auth.uid() AND rol = 'ADMINISTRADOR'));
+
+CREATE POLICY "Admin puede actualizar sedes"
+    ON public.sedes FOR UPDATE TO authenticated
+    USING (EXISTS (SELECT 1 FROM perfiles WHERE id = auth.uid() AND rol = 'ADMINISTRADOR'));
+
+-- 9. POLÍTICAS PROVEEDORES
+CREATE POLICY "CFO y Admin pueden gestionar proveedores"
+    ON public.proveedores FOR ALL TO authenticated
+    USING (EXISTS (SELECT 1 FROM perfiles WHERE id = auth.uid() AND rol IN ('CFO', 'ADMINISTRADOR')))
+    WITH CHECK (EXISTS (SELECT 1 FROM perfiles WHERE id = auth.uid() AND rol IN ('CFO', 'ADMINISTRADOR')));
+
+-- 10. POLÍTICAS SOLICITUDES
+-- Usuarios ven sus propias solicitudes
 CREATE POLICY "Usuarios ven sus propias solicitudes"
-    ON public.solicitudes FOR SELECT
-    TO authenticated
+    ON public.solicitudes FOR SELECT TO authenticated
     USING (auth.uid() = usuario_id);
 
--- Los usuarios pueden insertar solicitudes a su nombre
+-- Usuarios pueden insertar solicitudes a su nombre
 CREATE POLICY "Usuarios pueden insertar solicitudes"
-    ON public.solicitudes FOR INSERT
-    TO authenticated
+    ON public.solicitudes FOR INSERT TO authenticated
     WITH CHECK (auth.uid() = usuario_id);
 
--- Los usuarios pueden actualizar SUS PROPIAS solicitudes (cuando están OBSERVADAS)
+-- Usuarios actualizan sus solicitudes observadas
 CREATE POLICY "Usuarios actualizan sus solicitudes observadas"
-    ON public.solicitudes FOR UPDATE
-    TO authenticated
-    USING (auth.uid() = usuario_id AND estado = 'OBSERVADO');
+    ON public.solicitudes FOR UPDATE TO authenticated
+    USING (auth.uid() = usuario_id AND estado = 'OBSERVADO')
+    WITH CHECK (auth.uid() = usuario_id AND estado = 'PENDIENTE');
 
--- ==========================================
--- ATENCIÓN: POLÍTICA DEL CFO Y ADMIN
--- Para permitir que el CFO o ADMIN vea y modifique todo, 
--- debemos basarnos en la tabla `perfiles` que Supabase 
--- crea mediante Triggers o manualmente.
--- ==========================================
--- CFO / ADMIN pueden ver TODO
-CREATE POLICY "CFO y Admin ven todo"
-    ON public.solicitudes FOR SELECT
-    TO authenticated
-    USING (
-        EXISTS (
-            SELECT 1 FROM public.perfiles 
-            WHERE perfiles.id = auth.uid() 
-            AND perfiles.rol IN ('CFO', 'ADMINISTRADOR')
-        )
-    );
+-- CFO ve y modifica TODO
+CREATE POLICY "CFO gestiona todas las solicitudes"
+    ON public.solicitudes FOR ALL TO authenticated
+    USING (EXISTS (SELECT 1 FROM perfiles WHERE id = auth.uid() AND rol = 'CFO'))
+    WITH CHECK (EXISTS (SELECT 1 FROM perfiles WHERE id = auth.uid() AND rol = 'CFO'));
 
--- CFO / ADMIN pueden modificar TODO (cambiar estado)
-CREATE POLICY "CFO y Admin actualizan todo"
-    ON public.solicitudes FOR UPDATE
-    TO authenticated
-    USING (
-        EXISTS (
-            SELECT 1 FROM public.perfiles 
-            WHERE perfiles.id = auth.uid() 
-            AND perfiles.rol IN ('CFO', 'ADMINISTRADOR')
-        )
-    );
-
--- 7. Función para actualizar updated_at automáticamente
+-- 11. Función para actualizar updated_at automáticamente
 CREATE OR REPLACE FUNCTION actualizar_updated_at()
 RETURNS TRIGGER AS $$
 BEGIN

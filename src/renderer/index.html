@@ -10,7 +10,7 @@
 
 <body class="bg-fluent-bg select-none overflow-hidden">
 
-    <!-- PANTALLA DE LOGIN (Dark Glassmorphism Premium) -->
+    <!-- PANTALLA DE LOGIN -->
     <div id="login-screen"
         class="fixed inset-0 z-50 flex items-center justify-center bg-transparent animate-in fade-in duration-700">
         <div class="max-w-md w-full p-8 text-center drag-region">
@@ -24,7 +24,6 @@
                 <p class="text-sm text-slate-200 font-bold uppercase tracking-wider mt-1">Gestión Centralizada de Pagos
                 </p>
             </div>
-
             <div class="fluent-card p-10 text-left no-drag">
                 <form id="login-form" class="space-y-6">
                     <div class="space-y-2">
@@ -32,17 +31,13 @@
                         <input type="email" id="login-email" required class="fluent-input"
                             placeholder="usuario@empresa.com">
                     </div>
-
                     <div class="space-y-2">
                         <label class="fluent-label">Contraseña</label>
                         <input type="password" id="login-password" required class="fluent-input" placeholder="••••••••">
                     </div>
-
                     <div id="login-error"
                         class="hidden text-[11px] font-bold text-red-400 bg-red-950/40 p-3 rounded-lg border border-red-900/50 animate-in slide-in-from-top-2">
-                        <!-- Mensaje de error dinámico -->
                     </div>
-
                     <button type="submit" id="login-btn"
                         class="w-full py-3.5 bg-fluent-accent hover:bg-[#80d8ff] text-slate-950 rounded-xl text-sm font-black uppercase tracking-widest shadow-xl shadow-fluent-accent/10 transition-all transform active:scale-[0.97] flex items-center justify-center cursor-pointer mt-4">
                         <span id="login-btn-text">Iniciar Sesión</span>
@@ -52,15 +47,14 @@
                     </button>
                 </form>
             </div>
-
             <p class="mt-10 text-[11px] text-slate-300 font-extrabold uppercase tracking-[0.2em] no-drag">v1.0.0 Beta •
                 Infraestructura $0</p>
         </div>
     </div>
 
-    <!-- CONTENEDOR PRINCIPAL DE LA APP (Oculto por defecto) -->
+    <!-- APP CONTAINER -->
     <div id="app-container" class="hidden flex h-screen bg-transparent animate-in fade-in zoom-in-95 duration-500">
-        <!-- Sidebar con efecto Mica -->
+        <!-- Sidebar -->
         <aside class="w-64 mica-effect border-r border-fluent-border flex flex-col p-4 pt-10 drag-region">
             <div class="mb-8 px-2 no-drag flex items-center">
                 <div class="w-10 h-10 bg-white/10 rounded-lg p-1.5 mr-3 border border-white/10 backdrop-blur-md">
@@ -75,34 +69,37 @@
                 <div data-target="view-dashboard" class="nav-link nav-link-active" id="nav-dashboard">
                     <i data-lucide="layout-dashboard" class="w-4 h-4 mr-3"></i> Dashboard
                 </div>
-                <div data-target="view-bandeja" class="nav-link nav-link-inactive hidden" id="nav-bandeja">
-                    <i data-lucide="inbox" class="w-4 h-4 mr-3"></i> Trámites Activos
+                <div data-target="view-mis-solicitudes" class="nav-link nav-link-inactive hidden" id="nav-mis-solicitudes">
+                    <i data-lucide="inbox" class="w-4 h-4 mr-3"></i> Mis Solicitudes
                 </div>
-                <div data-target="view-nueva-solicitud" class="nav-link nav-link-inactive hidden"
-                    id="nav-nueva-solicitud">
-                    <i data-lucide="file-plus" class="w-4 h-4 mr-3"></i> Nueva Solicitud
+                <div data-target="view-cfo-bandeja" class="nav-link nav-link-inactive hidden" id="nav-cfo-bandeja">
+                    <i data-lucide="bell" class="w-4 h-4 mr-3"></i> Bandeja CFO
+                </div>
+                <div data-target="view-bancarizados" class="nav-link nav-link-inactive hidden" id="nav-bancarizados">
+                    <i data-lucide="history" class="w-4 h-4 mr-3"></i> Bancarizados
                 </div>
                 <div data-target="view-proveedores" class="nav-link nav-link-inactive hidden" id="nav-proveedores">
                     <i data-lucide="users" class="w-4 h-4 mr-3"></i> Proveedores
                 </div>
+                <div data-target="view-bancos" class="nav-link nav-link-inactive hidden" id="nav-bancos">
+                    <i data-lucide="landmark" class="w-4 h-4 mr-3"></i> Bancos
+                </div>
+                <div data-target="view-sedes" class="nav-link nav-link-inactive hidden" id="nav-sedes">
+                    <i data-lucide="building" class="w-4 h-4 mr-3"></i> Sedes
+                </div>
                 <div data-target="view-usuarios" class="nav-link nav-link-inactive hidden" id="nav-usuarios">
                     <i data-lucide="shield" class="w-4 h-4 mr-3"></i> Usuarios
                 </div>
-                <div data-target="view-historial" class="nav-link nav-link-inactive" id="nav-historial">
-                    <i data-lucide="history" class="w-4 h-4 mr-3"></i> Historial
-                </div>
             </nav>
-
             <div class="pt-4 border-t border-fluent-border mt-auto no-drag">
                 <div id="logout-btn"
                     class="flex items-center p-2 rounded-lg hover:bg-white/10 transition-colors cursor-pointer group">
                     <div id="user-initials"
                         class="w-9 h-9 rounded-full bg-fluent-accent text-white flex items-center justify-center text-xs font-bold mr-3 shadow-md">
-                        JD
                     </div>
                     <div class="flex-1 min-w-0">
-                        <p id="user-name" class="text-xs font-bold text-white truncate">Juan Doe</p>
-                        <p id="user-role" class="text-[10px] text-slate-300 font-medium italic">Administrador</p>
+                        <p id="user-name" class="text-xs font-bold text-white truncate"></p>
+                        <p id="user-role" class="text-[10px] text-slate-300 font-medium italic"></p>
                     </div>
                     <i data-lucide="log-out"
                         class="w-3.5 h-3.5 text-slate-300 group-hover:text-red-400 transition-colors"></i>
@@ -110,15 +107,14 @@
             </div>
         </aside>
 
-        <!-- Contenido Principal -->
+        <!-- Main Content -->
         <main class="flex-1 flex flex-col overflow-hidden bg-transparent">
-            <!-- Header con espacio reservado para los botones de control nativos de Windows -->
+            <!-- Header -->
             <header
                 class="h-14 min-h-[56px] flex items-center justify-between pl-8 pr-[140px] border-b border-fluent-border bg-black/10 backdrop-blur-xl drag-region">
-                <h2 id="current-view-title" class="text-xs font-bold uppercase tracking-widest text-slate-200 no-drag">
-                    Dashboard General</h2>
+                <h2 id="current-view-title"
+                    class="text-xs font-bold uppercase tracking-widest text-slate-200 no-drag">Dashboard General</h2>
                 <div class="flex items-center space-x-4 no-drag">
-                    <!-- Estado de Google Drive -->
                     <div id="drive-status"
                         class="flex items-center space-x-1.5 px-2.5 py-1 bg-white/5 rounded-full border border-white/10 text-[10px] font-bold text-slate-300">
                         <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" id="drive-status-dot"></span>
@@ -138,222 +134,112 @@
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                     <div class="fluent-card p-5">
                         <p class="text-[11px] font-bold text-slate-300 uppercase mb-1">Pendiente Revisión</p>
-                        <h3 class="text-3xl font-extrabold text-white">12</h3>
+                        <h3 class="text-3xl font-extrabold text-white" id="dashboard-pendientes">0</h3>
                     </div>
                     <div class="fluent-card p-5 border-l-4 border-l-fluent-accent">
                         <p class="text-[11px] font-bold text-slate-300 uppercase mb-1">Por Bancarizar</p>
-                        <h3 class="text-3xl font-extrabold text-fluent-accent">05</h3>
+                        <h3 class="text-3xl font-extrabold text-fluent-accent" id="dashboard-por-bancarizar">0</h3>
                     </div>
                     <div class="fluent-card p-5">
-                        <p class="text-[11px] font-bold text-slate-300 uppercase mb-1">Monto Total Hoy</p>
-                        <h3 class="text-3xl font-extrabold text-emerald-400">S/ 4,250.00</h3>
+                        <p class="text-[11px] font-bold text-slate-300 uppercase mb-1">Bancarizados Hoy</p>
+                        <h3 class="text-3xl font-extrabold text-emerald-400" id="dashboard-bancarizados">0</h3>
                     </div>
                 </div>
-
                 <div class="fluent-card overflow-hidden">
                     <div class="px-6 py-4 border-b border-fluent-border bg-black/10 flex justify-between items-center">
                         <h3 class="text-sm font-bold text-slate-200">Solicitudes Recientes</h3>
-                        <button class="text-[11px] text-fluent-accent font-bold uppercase hover:underline no-drag">Ver
-                            todo</button>
                     </div>
-                    <div class="p-12 text-center">
+                    <div class="p-12 text-center" id="dashboard-recientes-placeholder">
                         <div
                             class="bg-white/5 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 border border-white/10">
                             <i data-lucide="layout-dashboard" class="w-8 h-8 text-slate-400"></i>
                         </div>
-                        <p class="text-slate-200 text-sm font-semibold">No hay solicitudes pendientes en este momento.
-                        </p>
+                        <p class="text-slate-200 text-sm font-semibold">No hay solicitudes recientes.</p>
                     </div>
-                </div>
-            </section>
-
-            <!-- VISTA: NUEVA SOLICITUD -->
-            <section id="view-nueva-solicitud"
-                class="flex-1 overflow-y-auto p-8 hidden animate-in fade-in duration-500">
-                <div class="max-w-2xl mx-auto">
-                    <div class="fluent-card p-8">
-                        <h3 class="fluent-title">
-                            <i data-lucide="file-plus" class="w-5 h-5 mr-2 text-fluent-accent"></i>
-                            Registrar Pago
-                        </h3>
-
-                        <form id="solicitud-form" class="space-y-6">
-                            <div class="grid grid-cols-2 gap-6">
-                                <div class="space-y-2">
-                                    <label class="fluent-label flex justify-between">
-                                        Proveedor
-                                        <button type="button" id="btn-show-nuevo-proveedor"
-                                            class="text-[10px] text-fluent-accent font-bold uppercase hover:underline">Nuevo</button>
-                                    </label>
-                                    <select id="input-proveedor" class="fluent-input bg-black/20 appearance-none"
-                                        required>
-                                        <option value="" disabled selected>Cargando proveedores...</option>
-                                    </select>
-                                </div>
-                                <div class="space-y-2">
-                                    <label class="fluent-label">Monto (Soles)</label>
-                                    <input type="number" id="input-monto" class="fluent-input" placeholder="0.00"
-                                        step="0.01" min="0.01" required>
-                                </div>
-                            </div>
-
-                            <div class="space-y-2">
-                                <label class="fluent-label">Descripción del Servicio</label>
-                                <textarea id="input-descripcion" class="fluent-input h-24 resize-none"
-                                    placeholder="Detalles de la factura..." required></textarea>
-                            </div>
-
-                            <!-- Alerta de Detracción (Oculta por defecto) -->
-                            <div id="alert-detraccion" class="hidden fluent-alert-warning">
-                                <i data-lucide="bell" class="w-5 h-5 text-amber-500 mr-3 mt-0.5"></i>
-                                <div>
-                                    <p class="text-xs font-black uppercase tracking-wider">Sujeto a Detracción</p>
-                                    <p class="text-xs mt-0.5 opacity-90">Este monto supera los S/ 700.00. Se requiere
-                                        sustento de depósito.</p>
-                                </div>
-                            </div>
-
-                            <!-- Zona de Adjuntar Archivo -->
-                            <div class="space-y-2">
-                                <label class="fluent-label">Sustento Digital</label>
-
-                                <!-- Dropzone (visible cuando no hay archivo) -->
-                                <div id="dropzone" class="fluent-dropzone">
-                                    <input type="file" id="file-input" class="hidden"
-                                        accept=".pdf,.png,.jpg,.jpeg,.webp,.xml">
-                                    <div class="flex flex-col items-center space-y-3">
-                                        <div
-                                            class="w-14 h-14 rounded-full bg-white/5 border border-white/10 flex items-center justify-center">
-                                            <i data-lucide="file-plus" class="w-6 h-6 text-slate-400"></i>
-                                        </div>
-                                        <div>
-                                            <p class="text-sm font-semibold text-slate-200">Arrastra tu archivo aquí</p>
-                                            <p class="text-[11px] text-slate-400 mt-1">o <span
-                                                    class="text-fluent-accent font-bold cursor-pointer hover:underline"
-                                                    id="dropzone-browse">haz clic para seleccionar</span></p>
-                                        </div>
-                                        <p class="text-[10px] text-slate-500 uppercase tracking-wider font-bold">PDF •
-                                            PNG • JPG • XML — Máx. 25MB</p>
-                                    </div>
-                                </div>
-
-                                <!-- Preview del archivo (oculto por defecto) -->
-                                <div id="file-preview" class="hidden fluent-file-preview">
-                                    <div class="flex items-center space-x-3 min-w-0">
-                                        <div
-                                            class="w-10 h-10 rounded-lg bg-fluent-accent/10 border border-fluent-accent/20 flex items-center justify-center flex-shrink-0">
-                                            <i data-lucide="file-plus" class="w-4 h-4 text-fluent-accent"></i>
-                                        </div>
-                                        <div class="min-w-0">
-                                            <p id="file-preview-name" class="text-xs font-bold text-white truncate">
-                                                archivo.pdf</p>
-                                            <p id="file-preview-size" class="text-[10px] text-slate-400 font-medium">128
-                                                KB</p>
-                                        </div>
-                                    </div>
-                                    <button type="button" id="file-remove-btn"
-                                        class="p-2 hover:bg-red-500/10 rounded-lg transition-colors group">
-                                        <i data-lucide="log-out"
-                                            class="w-3.5 h-3.5 text-slate-400 group-hover:text-red-400 transition-colors"></i>
-                                    </button>
-                                </div>
-                            </div>
-
-                            <!-- Feedback de Progreso (oculto por defecto) -->
-                            <div id="upload-progress" class="hidden space-y-3">
-                                <div class="fluent-progress-bar">
-                                    <div id="progress-bar-fill" class="fluent-progress-bar-fill" style="width: 0%">
-                                    </div>
-                                </div>
-                                <p id="progress-text"
-                                    class="text-[11px] font-bold text-slate-300 text-center uppercase tracking-wider">
-                                </p>
-                            </div>
-
-                            <!-- Mensaje de Éxito (oculto por defecto) -->
-                            <div id="submit-success" class="hidden fluent-alert-success">
-                                <i data-lucide="layout-dashboard"
-                                    class="w-5 h-5 text-emerald-400 mr-3 mt-0.5 flex-shrink-0"></i>
-                                <div>
-                                    <p class="text-xs font-black uppercase tracking-wider">Solicitud Registrada</p>
-                                    <p id="submit-success-text" class="text-xs mt-0.5 opacity-90">Tu solicitud fue
-                                        enviada correctamente.</p>
-                                </div>
-                            </div>
-
-                            <!-- Mensaje de Error (oculto por defecto) -->
-                            <div id="submit-error" class="hidden fluent-alert-error">
-                                <i data-lucide="bell" class="w-5 h-5 text-red-400 mr-3 mt-0.5 flex-shrink-0"></i>
-                                <div>
-                                    <p class="text-xs font-black uppercase tracking-wider">Error al Registrar</p>
-                                    <p id="submit-error-text" class="text-xs mt-0.5 opacity-90"></p>
-                                </div>
-                            </div>
-
-                            <div class="pt-4">
-                                <button type="submit" id="solicitud-btn" class="fluent-btn-primary">
-                                    <span id="solicitud-btn-text">Enviar Solicitud</span>
-                                    <div id="solicitud-btn-spinner"
-                                        class="hidden ml-2 w-4 h-4 border-2 border-slate-950/30 border-t-slate-950 rounded-full animate-spin">
-                                    </div>
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </section>
-
-            <!-- VISTA: BANDEJA (TRÁMITES ACTIVOS) -->
-            <section id="view-bandeja"
-                class="flex-1 flex flex-col overflow-hidden p-8 hidden animate-in fade-in duration-500">
-                <div class="fluent-card flex-1 flex flex-col overflow-hidden">
-                    <div class="px-6 py-4 border-b border-fluent-border flex justify-between items-center bg-black/10">
-                        <h3 class="fluent-title mb-0"><i data-lucide="inbox"
-                                class="w-5 h-5 mr-2 text-fluent-accent"></i> Trámites Activos</h3>
-                    </div>
-                    <div class="flex-1 overflow-auto p-0">
+                    <div id="dashboard-recientes-table" class="hidden">
                         <table class="w-full text-left text-sm text-slate-300">
-                            <thead
-                                class="text-xs uppercase bg-black/20 text-slate-400 font-bold tracking-wider sticky top-0 backdrop-blur-md">
-                                <tr>
-                                    <th class="px-6 py-4">Fecha</th>
-                                    <th class="px-6 py-4">Proveedor</th>
-                                    <th class="px-6 py-4">Monto</th>
-                                    <th class="px-6 py-4">Estado</th>
-                                    <th class="px-6 py-4 text-right">Acción</th>
-                                </tr>
+                            <thead class="text-xs uppercase bg-black/20 text-slate-400 font-bold tracking-wider">
+                                <tr><th class="px-6 py-4">Fecha</th><th class="px-6 py-4">Proveedor</th><th class="px-6 py-4">Monto</th><th class="px-6 py-4">Estado</th></tr>
                             </thead>
-                            <tbody id="table-body-bandeja" class="divide-y divide-white/5">
-                                <!-- Llenado dinámico -->
-                            </tbody>
+                            <tbody id="dashboard-recientes-body" class="divide-y divide-white/5"></tbody>
                         </table>
                     </div>
                 </div>
             </section>
 
-            <!-- VISTA: HISTORIAL -->
-            <section id="view-historial"
+            <!-- VISTA: MIS SOLICITUDES -->
+            <section id="view-mis-solicitudes"
+                class="flex-1 flex flex-col overflow-hidden p-8 hidden animate-in fade-in duration-500">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xs font-bold uppercase tracking-widest text-slate-400">Solicitudes Pendientes y Observadas</h2>
+                    <button id="btn-nueva-solicitud"
+                        class="text-xs font-bold uppercase tracking-wider bg-fluent-accent text-slate-950 px-4 py-2 rounded-lg hover:bg-[#80d8ff] transition-colors">Nueva Solicitud</button>
+                </div>
+                <div class="fluent-card flex-1 flex flex-col overflow-hidden">
+                    <div class="flex-1 overflow-auto p-0">
+                        <table class="w-full text-left text-sm text-slate-300">
+                            <thead class="text-xs uppercase bg-black/20 text-slate-400 font-bold tracking-wider sticky top-0 backdrop-blur-md">
+                                <tr>
+                                    <th class="px-6 py-4">Fecha</th>
+                                    <th class="px-6 py-4">Proveedor</th>
+                                    <th class="px-6 py-4">Monto</th>
+                                    <th class="px-6 py-4">Estado</th>
+                                    <th class="px-6 py-4">Motivo</th>
+                                    <th class="px-6 py-4 text-right">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody id="table-body-mis-solicitudes" class="divide-y divide-white/5"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- VISTA: BANDEJA CFO -->
+            <section id="view-cfo-bandeja"
                 class="flex-1 flex flex-col overflow-hidden p-8 hidden animate-in fade-in duration-500">
                 <div class="fluent-card flex-1 flex flex-col overflow-hidden">
                     <div class="px-6 py-4 border-b border-fluent-border flex justify-between items-center bg-black/10">
-                        <h3 class="fluent-title mb-0"><i data-lucide="history"
-                                class="w-5 h-5 mr-2 text-fluent-accent"></i> Archivo Histórico</h3>
+                        <h3 class="fluent-title mb-0"><i data-lucide="bell" class="w-5 h-5 mr-2 text-fluent-accent"></i> Bandeja de Solicitudes</h3>
                     </div>
                     <div class="flex-1 overflow-auto p-0">
                         <table class="w-full text-left text-sm text-slate-300">
-                            <thead
-                                class="text-xs uppercase bg-black/20 text-slate-400 font-bold tracking-wider sticky top-0 backdrop-blur-md">
+                            <thead class="text-xs uppercase bg-black/20 text-slate-400 font-bold tracking-wider sticky top-0 backdrop-blur-md">
                                 <tr>
-                                    <th class="px-6 py-4">Fecha Cierre</th>
+                                    <th class="px-6 py-4">Fecha</th>
+                                    <th class="px-6 py-4">Solicitante</th>
                                     <th class="px-6 py-4">Proveedor</th>
                                     <th class="px-6 py-4">Monto</th>
-                                    <th class="px-6 py-4">Estado Final</th>
-                                    <th class="px-6 py-4 text-right">Sustento</th>
+                                    <th class="px-6 py-4">Estado</th>
+                                    <th class="px-6 py-4">Sustentos</th>
+                                    <th class="px-6 py-4 text-right">Acción</th>
                                 </tr>
                             </thead>
-                            <tbody id="table-body-historial" class="divide-y divide-white/5">
-                                <!-- Llenado dinámico -->
-                            </tbody>
+                            <tbody id="table-body-cfo-bandeja" class="divide-y divide-white/5"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- VISTA: BANCARIZADOS -->
+            <section id="view-bancarizados"
+                class="flex-1 flex flex-col overflow-hidden p-8 hidden animate-in fade-in duration-500">
+                <div class="fluent-card flex-1 flex flex-col overflow-hidden">
+                    <div class="px-6 py-4 border-b border-fluent-border flex justify-between items-center bg-black/10">
+                        <h3 class="fluent-title mb-0"><i data-lucide="history" class="w-5 h-5 mr-2 text-fluent-accent"></i> Solicitudes Bancarizadas</h3>
+                    </div>
+                    <div class="flex-1 overflow-auto p-0">
+                        <table class="w-full text-left text-sm text-slate-300">
+                            <thead class="text-xs uppercase bg-black/20 text-slate-400 font-bold tracking-wider sticky top-0 backdrop-blur-md">
+                                <tr>
+                                    <th class="px-6 py-4">Fecha</th>
+                                    <th class="px-6 py-4">Solicitante</th>
+                                    <th class="px-6 py-4">Proveedor</th>
+                                    <th class="px-6 py-4">Monto</th>
+                                    <th class="px-6 py-4">Sustentos</th>
+                                    <th class="px-6 py-4 text-right">Evidencias</th>
+                                </tr>
+                            </thead>
+                            <tbody id="table-body-bancarizados" class="divide-y divide-white/5"></tbody>
                         </table>
                     </div>
                 </div>
@@ -364,26 +250,63 @@
                 class="flex-1 flex flex-col overflow-hidden p-8 hidden animate-in fade-in duration-500">
                 <div class="fluent-card flex-1 flex flex-col overflow-hidden">
                     <div class="px-6 py-4 border-b border-fluent-border flex justify-between items-center bg-black/10">
-                        <h3 class="fluent-title mb-0"><i data-lucide="users"
-                                class="w-5 h-5 mr-2 text-fluent-accent"></i> Proveedores Autorizados</h3>
+                        <h3 class="fluent-title mb-0"><i data-lucide="users" class="w-5 h-5 mr-2 text-fluent-accent"></i> Proveedores</h3>
                         <button id="btn-add-proveedor"
-                            class="text-xs font-bold uppercase tracking-wider bg-fluent-accent text-slate-950 px-4 py-2 rounded-lg hover:bg-[#80d8ff] transition-colors">Añadir
-                            Proveedor</button>
+                            class="text-xs font-bold uppercase tracking-wider bg-fluent-accent text-slate-950 px-4 py-2 rounded-lg hover:bg-[#80d8ff] transition-colors">Añadir</button>
                     </div>
                     <div class="flex-1 overflow-auto p-0">
                         <table class="w-full text-left text-sm text-slate-300">
-                            <thead
-                                class="text-xs uppercase bg-black/20 text-slate-400 font-bold tracking-wider sticky top-0 backdrop-blur-md">
+                            <thead class="text-xs uppercase bg-black/20 text-slate-400 font-bold tracking-wider sticky top-0 backdrop-blur-md">
                                 <tr>
                                     <th class="px-6 py-4">Razón Social</th>
                                     <th class="px-6 py-4">Correo</th>
                                     <th class="px-6 py-4">Banco</th>
                                     <th class="px-6 py-4">Cuenta</th>
-                                    <th class="px-6 py-4 text-right">Acción</th>
+                                    <th class="px-6 py-4">Sede</th>
+                                    <th class="px-6 py-4 text-right">CCI</th>
                                 </tr>
                             </thead>
-                            <tbody id="table-body-proveedores" class="divide-y divide-white/5">
-                            </tbody>
+                            <tbody id="table-body-proveedores" class="divide-y divide-white/5"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- VISTA: BANCOS -->
+            <section id="view-bancos"
+                class="flex-1 flex flex-col overflow-hidden p-8 hidden animate-in fade-in duration-500">
+                <div class="fluent-card flex-1 flex flex-col overflow-hidden">
+                    <div class="px-6 py-4 border-b border-fluent-border flex justify-between items-center bg-black/10">
+                        <h3 class="fluent-title mb-0"><i data-lucide="landmark" class="w-5 h-5 mr-2 text-fluent-accent"></i> Bancos</h3>
+                        <button id="btn-add-banco"
+                            class="text-xs font-bold uppercase tracking-wider bg-fluent-accent text-slate-950 px-4 py-2 rounded-lg hover:bg-[#80d8ff] transition-colors">Añadir</button>
+                    </div>
+                    <div class="flex-1 overflow-auto p-0">
+                        <table class="w-full text-left text-sm text-slate-300">
+                            <thead class="text-xs uppercase bg-black/20 text-slate-400 font-bold tracking-wider sticky top-0 backdrop-blur-md">
+                                <tr><th class="px-6 py-4">Nombre</th></tr>
+                            </thead>
+                            <tbody id="table-body-bancos" class="divide-y divide-white/5"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- VISTA: SEDES -->
+            <section id="view-sedes"
+                class="flex-1 flex flex-col overflow-hidden p-8 hidden animate-in fade-in duration-500">
+                <div class="fluent-card flex-1 flex flex-col overflow-hidden">
+                    <div class="px-6 py-4 border-b border-fluent-border flex justify-between items-center bg-black/10">
+                        <h3 class="fluent-title mb-0"><i data-lucide="building" class="w-5 h-5 mr-2 text-fluent-accent"></i> Sedes</h3>
+                        <button id="btn-add-sede"
+                            class="text-xs font-bold uppercase tracking-wider bg-fluent-accent text-slate-950 px-4 py-2 rounded-lg hover:bg-[#80d8ff] transition-colors">Añadir</button>
+                    </div>
+                    <div class="flex-1 overflow-auto p-0">
+                        <table class="w-full text-left text-sm text-slate-300">
+                            <thead class="text-xs uppercase bg-black/20 text-slate-400 font-bold tracking-wider sticky top-0 backdrop-blur-md">
+                                <tr><th class="px-6 py-4">Nombre</th></tr>
+                            </thead>
+                            <tbody id="table-body-sedes" class="divide-y divide-white/5"></tbody>
                         </table>
                     </div>
                 </div>
@@ -394,26 +317,21 @@
                 class="flex-1 flex flex-col overflow-hidden p-8 hidden animate-in fade-in duration-500">
                 <div class="fluent-card flex-1 flex flex-col overflow-hidden">
                     <div class="px-6 py-4 border-b border-fluent-border flex justify-between items-center bg-black/10">
-                        <h3 class="fluent-title mb-0"><i data-lucide="shield"
-                                class="w-5 h-5 mr-2 text-fluent-accent"></i> Gestión de Equipo</h3>
+                        <h3 class="fluent-title mb-0"><i data-lucide="shield" class="w-5 h-5 mr-2 text-fluent-accent"></i> Usuarios</h3>
                         <button id="btn-add-usuario"
-                            class="text-xs font-bold uppercase tracking-wider bg-fluent-accent text-slate-950 px-4 py-2 rounded-lg hover:bg-[#80d8ff] transition-colors">Nuevo
-                            Usuario</button>
+                            class="text-xs font-bold uppercase tracking-wider bg-fluent-accent text-slate-950 px-4 py-2 rounded-lg hover:bg-[#80d8ff] transition-colors">Nuevo</button>
                     </div>
                     <div class="flex-1 overflow-auto p-0">
                         <table class="w-full text-left text-sm text-slate-300">
-                            <thead
-                                class="text-xs uppercase bg-black/20 text-slate-400 font-bold tracking-wider sticky top-0 backdrop-blur-md">
+                            <thead class="text-xs uppercase bg-black/20 text-slate-400 font-bold tracking-wider sticky top-0 backdrop-blur-md">
                                 <tr>
-                                    <th class="px-6 py-4">Nombre Completo</th>
+                                    <th class="px-6 py-4">Nombre</th>
                                     <th class="px-6 py-4">Correo</th>
-                                    <th class="px-6 py-4">Rol Asignado</th>
+                                    <th class="px-6 py-4">Rol</th>
                                     <th class="px-6 py-4">Ingreso</th>
-                                    <th class="px-6 py-4 text-right">Acción</th>
                                 </tr>
                             </thead>
-                            <tbody id="table-body-usuarios" class="divide-y divide-white/5">
-                            </tbody>
+                            <tbody id="table-body-usuarios" class="divide-y divide-white/5"></tbody>
                         </table>
                     </div>
                 </div>
@@ -421,50 +339,156 @@
         </main>
     </div>
 
-    <!-- MODAL: NUEVO PROVEEDOR -->
-    <div id="modal-proveedor"
+    <!-- MODAL: NUEVA/EDITAR SOLICITUD -->
+    <div id="modal-solicitud"
         class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm hidden animate-in fade-in">
-        <div class="fluent-card w-full max-w-md p-6">
-            <h3 class="fluent-title mb-4">Añadir Proveedor</h3>
-            <form id="form-nuevo-proveedor" class="space-y-4">
-                <div class="space-y-1">
-                    <label class="fluent-label">Razón Social / Nombre</label>
-                    <input type="text" id="prov-nombre" class="fluent-input" required>
-                </div>
-                <div class="space-y-1">
-                    <label class="fluent-label">Correo Electrónico (Opcional)</label>
-                    <input type="email" id="prov-correo" class="fluent-input">
-                </div>
+        <div class="fluent-card w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
+            <h3 class="fluent-title mb-4" id="modal-solicitud-title">Nueva Solicitud</h3>
+            <form id="form-solicitud" class="space-y-4">
                 <div class="grid grid-cols-2 gap-4">
                     <div class="space-y-1">
-                        <label class="fluent-label">Banco</label>
-                        <input type="text" id="prov-banco" class="fluent-input" placeholder="Ej. BCP, BBVA">
+                        <label class="fluent-label">Proveedor</label>
+                        <select id="input-proveedor" class="fluent-input bg-black/20 appearance-none" required>
+                            <option value="" disabled selected>Seleccione...</option>
+                        </select>
                     </div>
                     <div class="space-y-1">
-                        <label class="fluent-label">N° de Cuenta</label>
-                        <input type="text" id="prov-cuenta" class="fluent-input">
+                        <label class="fluent-label">Monto (Soles)</label>
+                        <input type="number" id="input-monto" class="fluent-input" placeholder="0.00" step="0.01" min="0.01" required>
                     </div>
                 </div>
                 <div class="space-y-1">
-                    <label class="fluent-label">CCI (Opcional)</label>
-                    <input type="text" id="prov-cci" class="fluent-input">
+                    <label class="fluent-label">Descripción</label>
+                    <textarea id="input-descripcion" class="fluent-input h-20 resize-none" placeholder="Detalles..." required></textarea>
+                </div>
+                <div id="alert-detraccion" class="hidden fluent-alert-warning">
+                    <i data-lucide="bell" class="w-5 h-5 text-amber-500 mr-3 mt-0.5"></i>
+                    <div>
+                        <p class="text-xs font-black uppercase tracking-wider">Sujeto a Detracción</p>
+                        <p class="text-xs mt-0.5 opacity-90">Monto > S/ 700.00. Se requiere sustento de depósito.</p>
+                    </div>
+                </div>
+                <div class="space-y-1">
+                    <label class="fluent-label">Sustentos (múltiples archivos)</label>
+                    <div id="dropzone-solicitud" class="fluent-dropzone">
+                        <input type="file" id="file-input-solicitud" class="hidden" accept=".pdf,.png,.jpg,.jpeg,.webp" multiple>
+                        <div class="flex flex-col items-center space-y-3">
+                            <div class="w-14 h-14 rounded-full bg-white/5 border border-white/10 flex items-center justify-center">
+                                <i data-lucide="file-plus" class="w-6 h-6 text-slate-400"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm font-semibold text-slate-200">Arrastra tus archivos aquí</p>
+                                <p class="text-[11px] text-slate-400 mt-1">o <span class="text-fluent-accent font-bold cursor-pointer hover:underline" id="dropzone-browse-solicitud">seleccionar archivos</span></p>
+                            </div>
+                            <p class="text-[10px] text-slate-500 uppercase tracking-wider font-bold">PDF • PNG • JPG • WEBP — Máx. 25MB c/u</p>
+                        </div>
+                    </div>
+                    <div id="file-list-solicitud" class="space-y-2 mt-2"></div>
+                </div>
+                <div id="upload-progress-solicitud" class="hidden space-y-2">
+                    <div class="fluent-progress-bar"><div id="progress-bar-fill-solicitud" class="fluent-progress-bar-fill" style="width:0%"></div></div>
+                    <p id="progress-text-solicitud" class="text-[11px] font-bold text-slate-300 text-center uppercase tracking-wider"></p>
+                </div>
+                <div id="submit-error-solicitud" class="hidden fluent-alert-error">
+                    <i data-lucide="bell" class="w-5 h-5 text-red-400 mr-3 mt-0.5 flex-shrink-0"></i>
+                    <div><p class="text-xs font-black uppercase tracking-wider">Error</p><p id="submit-error-text-solicitud" class="text-xs mt-0.5 opacity-90"></p></div>
                 </div>
                 <div class="flex justify-end space-x-3 pt-4">
-                    <button type="button" id="btn-cancel-proveedor"
-                        class="px-4 py-2 text-sm font-bold text-slate-300 hover:text-white transition-colors">Cancelar</button>
-                    <button type="submit"
-                        class="px-4 py-2 text-sm font-bold bg-fluent-accent text-slate-950 rounded-lg hover:bg-[#80d8ff] transition-colors">Guardar</button>
+                    <button type="button" id="btn-cancel-solicitud" class="px-4 py-2 text-sm font-bold text-slate-300 hover:text-white transition-colors">Cancelar</button>
+                    <button type="submit" id="btn-submit-solicitud" class="px-4 py-2 text-sm font-bold bg-fluent-accent text-slate-950 rounded-lg hover:bg-[#80d8ff] transition-colors">Enviar Solicitud</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- MODAL: NUEVO USUARIO -->
+    <!-- MODAL: PROVEEDOR -->
+    <div id="modal-proveedor"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm hidden animate-in fade-in">
+        <div class="fluent-card w-full max-w-md p-6">
+            <h3 class="fluent-title mb-4">Añadir Proveedor</h3>
+            <form id="form-proveedor" class="space-y-4">
+                <div class="space-y-1">
+                    <label class="fluent-label">Razón Social <span class="text-red-400">*</span></label>
+                    <input type="text" id="prov-nombre" class="fluent-input" required>
+                </div>
+                <div class="space-y-1">
+                    <label class="fluent-label">Correo (opcional)</label>
+                    <input type="email" id="prov-correo" class="fluent-input">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="space-y-1">
+                        <label class="fluent-label">Banco (opcional)</label>
+                        <select id="prov-banco-id" class="fluent-input bg-black/20 appearance-none">
+                            <option value="">Seleccione...</option>
+                        </select>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="fluent-label">N° Cuenta (opcional)</label>
+                        <input type="text" id="prov-cuenta" class="fluent-input">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="space-y-1">
+                        <label class="fluent-label">Sede (opcional)</label>
+                        <select id="prov-sede-id" class="fluent-input bg-black/20 appearance-none">
+                            <option value="">Seleccione...</option>
+                        </select>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="fluent-label">CCI (opcional)</label>
+                        <input type="text" id="prov-cci" class="fluent-input">
+                    </div>
+                </div>
+                <div class="flex justify-end space-x-3 pt-4">
+                    <button type="button" id="btn-cancel-proveedor" class="px-4 py-2 text-sm font-bold text-slate-300 hover:text-white transition-colors">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 text-sm font-bold bg-fluent-accent text-slate-950 rounded-lg hover:bg-[#80d8ff] transition-colors">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: BANCO -->
+    <div id="modal-banco"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm hidden animate-in fade-in">
+        <div class="fluent-card w-full max-w-sm p-6">
+            <h3 class="fluent-title mb-4">Añadir Banco</h3>
+            <form id="form-banco" class="space-y-4">
+                <div class="space-y-1">
+                    <label class="fluent-label">Nombre del Banco</label>
+                    <input type="text" id="banco-nombre" class="fluent-input" required>
+                </div>
+                <div class="flex justify-end space-x-3 pt-4">
+                    <button type="button" id="btn-cancel-banco" class="px-4 py-2 text-sm font-bold text-slate-300 hover:text-white transition-colors">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 text-sm font-bold bg-fluent-accent text-slate-950 rounded-lg hover:bg-[#80d8ff] transition-colors">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: SEDE -->
+    <div id="modal-sede"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm hidden animate-in fade-in">
+        <div class="fluent-card w-full max-w-sm p-6">
+            <h3 class="fluent-title mb-4">Añadir Sede</h3>
+            <form id="form-sede" class="space-y-4">
+                <div class="space-y-1">
+                    <label class="fluent-label">Nombre de la Sede</label>
+                    <input type="text" id="sede-nombre" class="fluent-input" required>
+                </div>
+                <div class="flex justify-end space-x-3 pt-4">
+                    <button type="button" id="btn-cancel-sede" class="px-4 py-2 text-sm font-bold text-slate-300 hover:text-white transition-colors">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 text-sm font-bold bg-fluent-accent text-slate-950 rounded-lg hover:bg-[#80d8ff] transition-colors">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: USUARIO -->
     <div id="modal-usuario"
         class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm hidden animate-in fade-in">
         <div class="fluent-card w-full max-w-md p-6">
             <h3 class="fluent-title mb-4">Añadir Usuario</h3>
-            <form id="form-nuevo-usuario" class="space-y-4">
+            <form id="form-usuario" class="space-y-4">
                 <div class="grid grid-cols-2 gap-4">
                     <div class="space-y-1">
                         <label class="fluent-label">Nombre</label>
@@ -476,7 +500,7 @@
                     </div>
                 </div>
                 <div class="space-y-1">
-                    <label class="fluent-label">Correo Electrónico</label>
+                    <label class="fluent-label">Correo</label>
                     <input type="email" id="usr-correo" class="fluent-input" required>
                 </div>
                 <div class="space-y-1">
@@ -484,25 +508,79 @@
                     <input type="password" id="usr-contrasena" class="fluent-input" required>
                 </div>
                 <div class="space-y-1">
-                    <label class="fluent-label">Rol Asignado</label>
+                    <label class="fluent-label">Rol</label>
                     <select id="usr-rol" class="fluent-input bg-black/20 appearance-none" required>
-                        <option value="RRHH">Recursos Humanos</option>
+                        <option value="RRHH">RRHH</option>
                         <option value="CONTADOR">Contador</option>
                         <option value="CFO">CFO</option>
                         <option value="ADMINISTRADOR">Administrador</option>
                     </select>
                 </div>
                 <div class="flex justify-end space-x-3 pt-4">
-                    <button type="button" id="btn-cancel-usuario"
-                        class="px-4 py-2 text-sm font-bold text-slate-300 hover:text-white transition-colors">Cancelar</button>
-                    <button type="submit"
-                        class="px-4 py-2 text-sm font-bold bg-fluent-accent text-slate-950 rounded-lg hover:bg-[#80d8ff] transition-colors">Guardar</button>
+                    <button type="button" id="btn-cancel-usuario" class="px-4 py-2 text-sm font-bold text-slate-300 hover:text-white transition-colors">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 text-sm font-bold bg-fluent-accent text-slate-950 rounded-lg hover:bg-[#80d8ff] transition-colors">Guardar</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Scripts -->
+    <!-- MODAL: OBSERVAR (CFO) -->
+    <div id="modal-observar"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm hidden animate-in fade-in">
+        <div class="fluent-card w-full max-w-md p-6">
+            <h3 class="fluent-title mb-4">Rebotar Solicitud</h3>
+            <form id="form-observar" class="space-y-4">
+                <div class="space-y-1">
+                    <label class="fluent-label">Motivo de la observación</label>
+                    <textarea id="observar-motivo" class="fluent-input h-24 resize-none" placeholder="Describa el motivo del rechazo..." required></textarea>
+                </div>
+                <div class="flex justify-end space-x-3 pt-4">
+                    <button type="button" id="btn-cancel-observar" class="px-4 py-2 text-sm font-bold text-slate-300 hover:text-white transition-colors">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 text-sm font-bold bg-red-500 text-white rounded-lg hover:bg-red-400 transition-colors">Rebotar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: BANCARIZAR (CFO) -->
+    <div id="modal-bancarizar"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm hidden animate-in fade-in">
+        <div class="fluent-card w-full max-w-lg p-6">
+            <h3 class="fluent-title mb-4">Bancarizar Solicitud</h3>
+            <form id="form-bancarizar" class="space-y-4">
+                <p class="text-sm text-slate-300">Adjunte las evidencias de la bancarización (comprobante, voucher, etc.)</p>
+                <div class="space-y-1">
+                    <label class="fluent-label">Evidencias</label>
+                    <div id="dropzone-bancarizar" class="fluent-dropzone">
+                        <input type="file" id="file-input-bancarizar" class="hidden" accept=".pdf,.png,.jpg,.jpeg,.webp" multiple>
+                        <div class="flex flex-col items-center space-y-3">
+                            <div class="w-14 h-14 rounded-full bg-white/5 border border-white/10 flex items-center justify-center">
+                                <i data-lucide="file-plus" class="w-6 h-6 text-slate-400"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm font-semibold text-slate-200">Arrastra evidencias aquí</p>
+                                <p class="text-[11px] text-slate-400 mt-1">o <span class="text-fluent-accent font-bold cursor-pointer hover:underline" id="dropzone-browse-bancarizar">seleccionar</span></p>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="file-list-bancarizar" class="space-y-2 mt-2"></div>
+                </div>
+                <div id="upload-progress-bancarizar" class="hidden space-y-2">
+                    <div class="fluent-progress-bar"><div id="progress-bar-fill-bancarizar" class="fluent-progress-bar-fill" style="width:0%"></div></div>
+                    <p id="progress-text-bancarizar" class="text-[11px] font-bold text-slate-300 text-center uppercase tracking-wider"></p>
+                </div>
+                <div id="submit-error-bancarizar" class="hidden fluent-alert-error">
+                    <i data-lucide="bell" class="w-5 h-5 text-red-400 mr-3 mt-0.5 flex-shrink-0"></i>
+                    <div><p class="text-xs font-black uppercase tracking-wider">Error</p><p id="submit-error-text-bancarizar" class="text-xs mt-0.5 opacity-90"></p></div>
+                </div>
+                <div class="flex justify-end space-x-3 pt-4">
+                    <button type="button" id="btn-cancel-bancarizar" class="px-4 py-2 text-sm font-bold text-slate-300 hover:text-white transition-colors">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 text-sm font-bold bg-emerald-500 text-white rounded-lg hover:bg-emerald-400 transition-colors">Confirmar Bancarización</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="./renderer.js"></script>
 </body>
