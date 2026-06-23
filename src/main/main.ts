@@ -11,6 +11,7 @@ dotenv.config();
 
 const supabaseUrl = process.env.SUPABASE_URL || '';
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || '';
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY || '';
 
 const googleEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || '';
 const googlePrivateKey = process.env.GOOGLE_PRIVATE_KEY || '';
@@ -38,8 +39,9 @@ if (!googleEmail || !googlePrivateKey || !googleFolderId) {
   }
 }
 
-// Inicializar Supabase en Capa Segura con resiliencia (Evita crasheo si no está configurado)
+// Inicializar Supabase en Capa Segura con resiliencia
 let supabase: any = null;
+let supabaseAdmin: any = null;
 let supabaseErrorMsg = '';
 
 if (!supabaseUrl || !supabaseAnonKey) {
@@ -50,6 +52,11 @@ if (!supabaseUrl || !supabaseAnonKey) {
     supabase = createClient(supabaseUrl, supabaseAnonKey, {
       auth: { persistSession: false }
     });
+    if (supabaseServiceKey) {
+      supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+        auth: { autoRefreshToken: false, persistSession: false }
+      });
+    }
   } catch (err: any) {
     supabaseErrorMsg = `Error al inicializar Supabase: ${err.message}`;
     console.error(err);
@@ -109,14 +116,14 @@ ipcMain.handle('auth:login', async (_event, { correo, contrasena }) => {
       .single();
 
     if (perfilError) {
-      return { 
-        success: true, 
-        user: { 
-          id: data.user?.id, 
+      return {
+        success: true,
+        user: {
+          id: data.user?.id,
           email: data.user?.email,
           nombre: 'Usuario',
-          rol: 'SOLICITANTE'
-        } 
+          rol: 'RRHH'
+        }
       };
     }
 
@@ -144,7 +151,7 @@ ipcMain.handle('auth:get-session', async () => {
   if (!supabase) return { session: null };
   const { data } = await supabase.auth.getSession();
   if (!data.session) return { session: null };
-  
+
   const { data: perfil } = await supabase
     .from('perfiles')
     .select('rol, nombre, apellido')
@@ -156,7 +163,7 @@ ipcMain.handle('auth:get-session', async () => {
       id: data.session.user?.id,
       email: data.session.user?.email,
       nombre: perfil ? `${perfil.nombre} ${perfil.apellido}` : 'Usuario',
-      rol: perfil ? perfil.rol : 'SOLICITANTE'
+      rol: perfil ? perfil.rol : 'RRHH'
     }
   };
 });
@@ -266,13 +273,97 @@ ipcMain.handle('drive:upload-optimized', async (_event, { name, mimeType, base64
   }
 });
 
+// Manejadores IPC para Proveedores y Usuarios
+ipcMain.handle('db:crear-proveedor', async (_event, datos) => {
+  if (!supabase) return { success: false, error: supabaseErrorMsg || 'Base de datos no configurada.' };
+  try {
+    const { data, error } = await supabase
+      .from('proveedores')
+      .insert(datos)
+      .select()
+      .single();
+    if (error) return { success: false, error: error.message };
+    return { success: true, proveedor: data };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Error al crear proveedor' };
+  }
+});
+
+ipcMain.handle('db:listar-proveedores', async () => {
+  if (!supabase) return { success: false, error: supabaseErrorMsg || 'Base de datos no configurada.' };
+  try {
+    const { data, error } = await supabase
+      .from('proveedores')
+      .select('*')
+      .order('nombre_razon_social', { ascending: true });
+    if (error) return { success: false, error: error.message };
+    return { success: true, proveedores: data };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Error al listar proveedores' };
+  }
+});
+
+ipcMain.handle('auth:listar-usuarios', async () => {
+  if (!supabaseAdmin) return { success: false, error: 'Falta SUPABASE_SERVICE_KEY en .env para esta acción.' };
+  try {
+    const { data: usersData, error: usersError } = await supabaseAdmin.auth.admin.listUsers();
+    if (usersError) return { success: false, error: usersError.message };
+
+    const { data: perfilesData, error: perfilesError } = await supabaseAdmin.from('perfiles').select('*');
+    if (perfilesError) return { success: false, error: perfilesError.message };
+
+    // Unir datos de auth con perfiles
+    const usuarios = usersData.users.map((u: any) => {
+      const perfil = perfilesData.find((p: any) => p.id === u.id);
+      return {
+        id: u.id,
+        email: u.email,
+        nombre: perfil ? perfil.nombre : '',
+        apellido: perfil ? perfil.apellido : '',
+        rol: perfil ? perfil.rol : 'RRHH',
+        created_at: u.created_at
+      };
+    });
+
+    return { success: true, usuarios };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Error al listar usuarios' };
+  }
+});
+
+ipcMain.handle('auth:crear-usuario', async (_event, datos) => {
+  if (!supabaseAdmin) return { success: false, error: 'Falta SUPABASE_SERVICE_KEY en .env para esta acción.' };
+  try {
+    const { data, error } = await supabaseAdmin.auth.admin.createUser({
+      email: datos.correo,
+      password: datos.contrasena,
+      email_confirm: true
+    });
+    if (error) return { success: false, error: error.message };
+
+    // Insertar en la tabla de perfiles (Admin lo puede hacer directamente)
+    const { error: perfilError } = await supabaseAdmin.from('perfiles').insert({
+      id: data.user.id,
+      nombre: datos.nombre,
+      apellido: datos.apellido,
+      rol: datos.rol
+    });
+
+    if (perfilError) return { success: false, error: perfilError.message };
+
+    return { success: true, user: data.user };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Error al crear usuario' };
+  }
+});
+
 // Manejadores IPC para Base de Datos (Solicitudes)
 ipcMain.handle('db:crear-solicitud', async (_event, datos) => {
   if (!supabase) {
     return { success: false, error: supabaseErrorMsg || 'Base de datos no configurada.' };
   }
   try {
-    // Obtener sesión activa para el solicitante_id
+    // Obtener sesión activa para el usuario_id
     const { data: sessionData } = await supabase.auth.getSession();
     if (!sessionData.session) {
       return { success: false, error: 'No hay sesión activa. Inicie sesión nuevamente.' };
@@ -282,8 +373,8 @@ ipcMain.handle('db:crear-solicitud', async (_event, datos) => {
     const { data, error } = await supabase
       .from('solicitudes')
       .insert({
-        solicitante_id: userId,
-        proveedor: datos.proveedor,
+        usuario_id: userId,
+        proveedor_id: datos.proveedorId,
         descripcion: datos.descripcion,
         monto: datos.monto,
         requiere_detraccion: datos.requiereDetraccion,
@@ -304,7 +395,7 @@ ipcMain.handle('db:crear-solicitud', async (_event, datos) => {
   }
 });
 
-ipcMain.handle('db:listar-solicitudes', async () => {
+ipcMain.handle('db:listar-solicitudes', async (_event, filtro) => {
   if (!supabase) {
     return { success: false, error: supabaseErrorMsg || 'Base de datos no configurada.' };
   }
@@ -326,13 +417,23 @@ ipcMain.handle('db:listar-solicitudes', async () => {
       .from('solicitudes')
       .select(`
         *,
-        perfiles:solicitante_id (nombre, apellido)
+        perfiles:usuario_id (nombre, apellido),
+        proveedores:proveedor_id (nombre_razon_social)
       `)
       .order('created_at', { ascending: false });
 
-    // Si NO es CFO, filtrar solo sus solicitudes
-    if (!perfil || perfil.rol !== 'CFO') {
-      query = query.eq('solicitante_id', userId);
+    // Lógica de Filtros (Bandeja vs Historial)
+    // - actives: PENDIENTE, OBSERVADO
+    // - history: APROBADO, BANCARIZADO, RECHAZADO
+    if (filtro === 'activas') {
+      query = query.in('estado', ['PENDIENTE', 'OBSERVADO']);
+    } else if (filtro === 'historial') {
+      query = query.in('estado', ['APROBADO', 'BANCARIZADO', 'RECHAZADO']);
+    }
+
+    // Si NO es CFO ni ADMINISTRADOR, filtrar solo sus propias solicitudes
+    if (!perfil || (perfil.rol !== 'CFO' && perfil.rol !== 'ADMINISTRADOR')) {
+      query = query.eq('usuario_id', userId);
     }
 
     const { data, error } = await query;

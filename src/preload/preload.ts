@@ -5,7 +5,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   auth: {
     login: (correo: string, contrasena: string) => ipcRenderer.invoke('auth:login', { correo, contrasena }),
     logout: () => ipcRenderer.invoke('auth:logout'),
-    obtenerSesion: () => ipcRenderer.invoke('auth:get-session')
+    obtenerSesion: () => ipcRenderer.invoke('auth:get-session'),
+    crearUsuario: (datos: any) => ipcRenderer.invoke('auth:crear-usuario', datos),
+    listarUsuarios: () => ipcRenderer.invoke('auth:listar-usuarios')
   },
   drive: {
     testConnection: () => ipcRenderer.invoke('drive:test-connection'),
@@ -24,6 +26,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
       archivoDriveId: string;
       archivoDriveUrl: string;
     }) => ipcRenderer.invoke('db:crear-solicitud', datos),
-    listarSolicitudes: () => ipcRenderer.invoke('db:listar-solicitudes')
+    listarSolicitudes: (filtro: string) => ipcRenderer.invoke('db:listar-solicitudes', filtro),
+    crearProveedor: (datos: any) => ipcRenderer.invoke('db:crear-proveedor', datos),
+    listarProveedores: () => ipcRenderer.invoke('db:listar-proveedores')
   }
 });

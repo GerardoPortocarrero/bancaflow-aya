@@ -1,70 +1,104 @@
--- SCRIPT DE CONFIGURACIÓN: Tabla de Solicitudes (BancaFlow - Fase 3)
--- Ejecuta este código en el "SQL Editor" de tu panel de Supabase.
--- IMPORTANTE: Ejecuta DESPUÉS de haber corrido setup_supabase.sql (tabla perfiles).
+-- ==========================================
+-- SCRIPT DE CONFIGURACIÓN BÁSICA - BANCAFLOW
+-- ==========================================
+-- IMPORTANTE: Ejecutar esto en el SQL Editor de Supabase
 
--- 1. Crear tabla de solicitudes de pago
-CREATE TABLE solicitudes (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  solicitante_id UUID REFERENCES auth.users ON DELETE CASCADE NOT NULL,
-  proveedor TEXT NOT NULL,
-  descripcion TEXT NOT NULL,
-  monto NUMERIC(12,2) NOT NULL,
-  requiere_detraccion BOOLEAN DEFAULT FALSE,
-  archivo_nombre TEXT,
-  archivo_drive_id TEXT,
-  archivo_drive_url TEXT,
-  estado TEXT CHECK (estado IN ('PENDIENTE','APROBADO','RECHAZADO','DEVUELTO','BANCARIZADO')) DEFAULT 'PENDIENTE',
-  motivo_rechazo TEXT,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+-- 1. Habilitar la extensión UUID si no existe
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- 2. Crear tabla de PROVEEDORES
+CREATE TABLE IF NOT EXISTS public.proveedores (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    nombre_razon_social TEXT NOT NULL,
+    correo TEXT,
+    banco TEXT,
+    cuenta_bancaria TEXT,
+    cci TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 2. Habilitar Seguridad de Filas (RLS)
-ALTER TABLE solicitudes ENABLE ROW LEVEL SECURITY;
+-- 3. Crear tabla de SOLICITUDES
+CREATE TABLE IF NOT EXISTS public.solicitudes (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    usuario_id UUID NOT NULL REFERENCES auth.users(id),
+    proveedor_id UUID NOT NULL REFERENCES public.proveedores(id),
+    descripcion TEXT NOT NULL,
+    monto NUMERIC(10, 2) NOT NULL,
+    requiere_detraccion BOOLEAN DEFAULT false,
+    archivo_nombre TEXT NOT NULL,
+    archivo_drive_id TEXT NOT NULL,
+    archivo_drive_url TEXT NOT NULL,
+    estado TEXT NOT NULL DEFAULT 'PENDIENTE' CHECK (estado IN ('PENDIENTE', 'OBSERVADO', 'APROBADO', 'BANCARIZADO', 'RECHAZADO')),
+    observacion_motivo TEXT, -- Para cuando el CFO devuelva la solicitud
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
 
--- 3. Política de INSERCIÓN: Cualquier usuario autenticado puede crear solicitudes
-CREATE POLICY "Usuarios autenticados pueden crear solicitudes"
-ON solicitudes FOR INSERT
-TO authenticated
-WITH CHECK (auth.uid() = solicitante_id);
+-- 4. SEGURIDAD (Row Level Security)
+ALTER TABLE public.proveedores ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.solicitudes ENABLE ROW LEVEL SECURITY;
 
--- 4. Política de LECTURA: Cada usuario ve sus propias solicitudes
+-- 5. POLÍTICAS PROVEEDORES
+-- Todos los usuarios autenticados pueden ver proveedores
+CREATE POLICY "Cualquiera autenticado puede ver proveedores"
+    ON public.proveedores FOR SELECT
+    TO authenticated
+    USING (true);
+
+-- Todos los usuarios autenticados pueden insertar proveedores
+CREATE POLICY "Cualquiera autenticado puede insertar proveedores"
+    ON public.proveedores FOR INSERT
+    TO authenticated
+    WITH CHECK (true);
+
+-- 6. POLÍTICAS SOLICITUDES
+-- Los usuarios solo pueden ver SUS PROPIAS solicitudes
 CREATE POLICY "Usuarios ven sus propias solicitudes"
-ON solicitudes FOR SELECT
-TO authenticated
-USING (auth.uid() = solicitante_id);
+    ON public.solicitudes FOR SELECT
+    TO authenticated
+    USING (auth.uid() = usuario_id);
 
--- 5. Política de LECTURA para CFO: El CFO puede ver TODAS las solicitudes
--- (Se identifica por su rol en la tabla perfiles)
-CREATE POLICY "CFO puede ver todas las solicitudes"
-ON solicitudes FOR SELECT
-TO authenticated
-USING (
-  EXISTS (
-    SELECT 1 FROM perfiles
-    WHERE perfiles.id = auth.uid()
-    AND perfiles.rol = 'CFO'
-  )
-);
+-- Los usuarios pueden insertar solicitudes a su nombre
+CREATE POLICY "Usuarios pueden insertar solicitudes"
+    ON public.solicitudes FOR INSERT
+    TO authenticated
+    WITH CHECK (auth.uid() = usuario_id);
 
--- 6. Política de ACTUALIZACIÓN para CFO: Solo el CFO puede cambiar estado
-CREATE POLICY "CFO puede actualizar solicitudes"
-ON solicitudes FOR UPDATE
-TO authenticated
-USING (
-  EXISTS (
-    SELECT 1 FROM perfiles
-    WHERE perfiles.id = auth.uid()
-    AND perfiles.rol = 'CFO'
-  )
-)
-WITH CHECK (
-  EXISTS (
-    SELECT 1 FROM perfiles
-    WHERE perfiles.id = auth.uid()
-    AND perfiles.rol = 'CFO'
-  )
-);
+-- Los usuarios pueden actualizar SUS PROPIAS solicitudes (cuando están OBSERVADAS)
+CREATE POLICY "Usuarios actualizan sus solicitudes observadas"
+    ON public.solicitudes FOR UPDATE
+    TO authenticated
+    USING (auth.uid() = usuario_id AND estado = 'OBSERVADO');
+
+-- ==========================================
+-- ATENCIÓN: POLÍTICA DEL CFO Y ADMIN
+-- Para permitir que el CFO o ADMIN vea y modifique todo, 
+-- debemos basarnos en la tabla `perfiles` que Supabase 
+-- crea mediante Triggers o manualmente.
+-- ==========================================
+-- CFO / ADMIN pueden ver TODO
+CREATE POLICY "CFO y Admin ven todo"
+    ON public.solicitudes FOR SELECT
+    TO authenticated
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.perfiles 
+            WHERE perfiles.id = auth.uid() 
+            AND perfiles.rol IN ('CFO', 'ADMINISTRADOR')
+        )
+    );
+
+-- CFO / ADMIN pueden modificar TODO (cambiar estado)
+CREATE POLICY "CFO y Admin actualizan todo"
+    ON public.solicitudes FOR UPDATE
+    TO authenticated
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.perfiles 
+            WHERE perfiles.id = auth.uid() 
+            AND perfiles.rol IN ('CFO', 'ADMINISTRADOR')
+        )
+    );
 
 -- 7. Función para actualizar updated_at automáticamente
 CREATE OR REPLACE FUNCTION actualizar_updated_at()
@@ -75,7 +109,8 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trigger_solicitudes_updated_at ON public.solicitudes;
 CREATE TRIGGER trigger_solicitudes_updated_at
-  BEFORE UPDATE ON solicitudes
+  BEFORE UPDATE ON public.solicitudes
   FOR EACH ROW
   EXECUTE FUNCTION actualizar_updated_at();
