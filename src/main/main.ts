@@ -507,12 +507,11 @@ ipcMain.handle('db:listar-perfiles', async () => {
 
 ipcMain.handle('db:crear-solicitud', async (_event, datos) => {
   if (!supabase) return { success: false, error: supabaseErrorMsg || 'Base de datos no configurada.' };
-  if (!supabaseAdmin) return { success: false, error: 'Base de datos no disponible.' };
   try {
     const userId = await getCurrentUserId();
     if (!userId) return { success: false, error: 'No hay sesión activa. Inicie sesión nuevamente.' };
 
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await supabase
       .from('solicitudes')
       .insert({
         usuario_id: userId,
@@ -535,18 +534,17 @@ ipcMain.handle('db:crear-solicitud', async (_event, datos) => {
 
 ipcMain.handle('db:listar-solicitudes', async (_event, { vista, rol }) => {
   if (!supabase) return { success: false, error: supabaseErrorMsg || 'Base de datos no configurada.' };
-  if (!supabaseAdmin) return { success: false, error: 'Base de datos no disponible.' };
   try {
     const userId = await getCurrentUserId();
     if (!userId) return { success: false, error: 'No hay sesión activa.' };
 
-    let query = supabaseAdmin
+    let query = supabase
       .from('solicitudes')
       .select('*')
       .order('created_at', { ascending: false });
 
     if (vista === 'cfo-bandeja') {
-      query = query.in('estado', ['PENDIENTE', 'OBSERVADO']);
+      query = query.in('estado', ['PENDIENTE']);
     } else if (vista === 'bancarizados') {
       query = query.eq('estado', 'BANCARIZADO');
       if (rol !== 'CFO') {
@@ -625,6 +623,20 @@ ipcMain.handle('db:actualizar-solicitud', async (_event, { id, descripcion, prov
     return { success: true, solicitud: data };
   } catch (err: any) {
     return { success: false, error: err.message || 'Error al actualizar solicitud' };
+  }
+});
+
+ipcMain.handle('db:eliminar-solicitud', async (_event, { id }) => {
+  if (!supabaseAdmin) return { success: false, error: 'Base de datos no disponible.' };
+  try {
+    const { error } = await supabaseAdmin
+      .from('solicitudes')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', id);
+    if (error) return { success: false, error: error.message };
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Error al eliminar solicitud' };
   }
 });
 

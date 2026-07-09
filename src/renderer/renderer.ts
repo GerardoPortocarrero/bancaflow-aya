@@ -33,6 +33,7 @@ interface IElectronAPI {
     observarSolicitud: (id: string, motivo: string) => Promise<{ success: boolean; solicitud?: any; error?: string }>;
     bancarizarSolicitud: (id: string, evidencias: any[]) => Promise<{ success: boolean; solicitud?: any; error?: string }>;
     actualizarSolicitud: (datos: any) => Promise<{ success: boolean; solicitud?: any; error?: string }>;
+    eliminarSolicitud: (id: string) => Promise<{ success: boolean; error?: string }>;
     actualizarBanco: (id: string, nombre: string, moneda: string) => Promise<{ success: boolean; banco?: any; error?: string }>;
     eliminarBanco: (id: string) => Promise<{ success: boolean; error?: string }>;
     actualizarSede: (id: string, nombre: string) => Promise<{ success: boolean; sede?: any; error?: string }>;
@@ -225,14 +226,23 @@ async function cargarMisSolicitudes() {
         <span class="px-2 py-1 rounded text-[10px] font-bold tracking-wider ${s.estado === 'PENDIENTE' ? 'bg-amber-400/10 text-amber-400 border border-amber-400/20' : 'bg-red-400/10 text-red-400 border border-red-400/20'}">${s.estado}</span>
       </td>
       <td class="px-6 py-4 text-slate-400 text-xs">${s.observacion_motivo || '-'}</td>
-      <td class="px-6 py-4 text-right">
-        ${s.estado === 'OBSERVADO' ? `<button class="btn-editar-solicitud text-[10px] uppercase font-bold text-fluent-accent hover:underline" data-id="${s.id}">Editar</button>` : '-'}
+      <td class="px-6 py-4 text-right space-x-2">
+        ${s.estado === 'OBSERVADO' ? `<button class="btn-editar-solicitud text-[10px] uppercase font-bold text-fluent-accent hover:underline" data-id="${s.id}">Editar</button>` : ''}
+        ${s.estado !== 'BANCARIZADO' ? `<button class="btn-eliminar-solicitud text-[10px] uppercase font-bold text-red-400 hover:underline" data-id="${s.id}">Eliminar</button>` : ''}
       </td>
     </tr>
   `).join('');
 
   tbody.querySelectorAll('.btn-editar-solicitud').forEach(btn => {
     btn.addEventListener('click', () => abrirModalSolicitud(btn.getAttribute('data-id')));
+  });
+  tbody.querySelectorAll('.btn-eliminar-solicitud').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.getAttribute('data-id');
+      if (!id || !confirm('¿Eliminar esta solicitud?')) return;
+      const r = await window.electronAPI.db.eliminarSolicitud(id);
+      if (r.success) { await Promise.all([cargarMisSolicitudes(), cargarDashboard(), cargarBancarizados()]); } else { alert('Error: ' + r.error); }
+    });
   });
 }
 
@@ -492,9 +502,10 @@ async function cargarBancarizados() {
   const res = await window.electronAPI.db.listarSolicitudes('bancarizados', rol);
   const tbody = document.getElementById('table-body-bancarizados');
   const solicitudes = res.success && Array.isArray(res.solicitudes) ? res.solicitudes : [];
+  const esCFO = rol === 'CFO';
   if (!tbody) return;
   if (solicitudes.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="6" class="text-center p-8 text-slate-500">No hay solicitudes bancarizadas.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" class="text-center p-8 text-slate-500">No hay solicitudes bancarizadas.</td></tr>`;
     return;
   }
   tbody.innerHTML = solicitudes.map((s: any) => `
@@ -505,8 +516,18 @@ async function cargarBancarizados() {
       <td class="px-6 py-4 font-bold text-emerald-400">S/ ${Number(s.monto).toFixed(2)}</td>
       <td class="px-6 py-4">${renderArchivos(s.archivos)}</td>
       <td class="px-6 py-4 text-right">${renderArchivos(s.evidencias_bancarizacion)}</td>
+      <td class="px-6 py-4 text-right">${esCFO ? `<button class="btn-eliminar-bancarizado text-[10px] uppercase font-bold text-red-400 hover:underline" data-id="${s.id}">Eliminar</button>` : '-'}</td>
     </tr>
   `).join('');
+
+  tbody.querySelectorAll('.btn-eliminar-bancarizado').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.getAttribute('data-id');
+      if (!id || !confirm('¿Eliminar esta solicitud bancarizada? Se moverá a eliminados.')) return;
+      const r = await window.electronAPI.db.eliminarSolicitud(id);
+      if (r.success) { await Promise.all([cargarBancarizados(), cargarDashboard()]); } else { alert('Error: ' + r.error); }
+    });
+  });
 }
 
 // --- PROVEEDORES ---
@@ -1027,6 +1048,25 @@ function setupEventListeners() {
   document.getElementById('btn-cancel-usuario')?.addEventListener('click', () => closeModal('modal-usuario'));
 }
 
+// --- TABLE SEARCH ---
+function setupTableSearches() {
+  const searchIds = ['mis-solicitudes', 'cfo-bandeja', 'bancarizados', 'proveedores', 'bancos', 'sedes', 'usuarios'];
+  searchIds.forEach(section => {
+    const input = document.getElementById(`search-${section}`) as HTMLInputElement;
+    const tbody = document.getElementById(`table-body-${section}`);
+    if (!input || !tbody) return;
+    input.addEventListener('input', () => {
+      const q = input.value.toLowerCase().trim();
+      const rows = tbody.querySelectorAll('tr');
+      rows.forEach(row => {
+        if (q === '') { row.style.display = ''; return; }
+        const text = row.textContent?.toLowerCase() || '';
+        row.style.display = text.includes(q) ? '' : 'none';
+      });
+    });
+  });
+}
+
 // --- FILE DROPZONES ---
 function setupDropzones() {
   setupFileDropzone('dropzone-solicitud', 'file-input-solicitud', 'dropzone-browse-solicitud', 'file-list-solicitud', { files: solicitudFiles });
@@ -1037,6 +1077,7 @@ function setupDropzones() {
 function init() {
   setupNavigation();
   setupEventListeners();
+  setupTableSearches();
   setupDropzones();
   verificarSesion();
   console.log('BancaFlow v2 Renderer initialized');

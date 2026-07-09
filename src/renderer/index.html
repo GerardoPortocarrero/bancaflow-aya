@@ -176,6 +176,9 @@
                         class="text-xs font-bold uppercase tracking-wider bg-fluent-accent text-slate-950 px-4 py-2 rounded-lg hover:bg-[#80d8ff] transition-colors">Nueva Solicitud</button>
                 </div>
                 <div class="fluent-card flex-1 flex flex-col overflow-hidden">
+                    <div class="px-6 py-2 border-b border-fluent-border bg-black/5">
+                        <input type="text" id="search-mis-solicitudes" placeholder="Buscar..." class="fluent-input text-xs">
+                    </div>
                     <div class="flex-1 overflow-auto p-0">
                         <table class="w-full text-left text-sm text-slate-300">
                             <thead class="text-xs uppercase bg-black/20 text-slate-400 font-bold tracking-wider sticky top-0 backdrop-blur-md">
@@ -200,6 +203,9 @@
                 <div class="fluent-card flex-1 flex flex-col overflow-hidden">
                     <div class="px-6 py-4 border-b border-fluent-border flex justify-between items-center bg-black/10">
                         <h3 class="fluent-title mb-0"><i data-lucide="bell" class="w-5 h-5 mr-2 text-fluent-accent"></i> Bandeja de Solicitudes</h3>
+                    </div>
+                    <div class="px-6 py-2 border-b border-fluent-border bg-black/5">
+                        <input type="text" id="search-cfo-bandeja" placeholder="Buscar..." class="fluent-input text-xs">
                     </div>
                     <div class="flex-1 overflow-auto p-0">
                         <table class="w-full text-left text-sm text-slate-300">
@@ -227,6 +233,9 @@
                     <div class="px-6 py-4 border-b border-fluent-border flex justify-between items-center bg-black/10">
                         <h3 class="fluent-title mb-0"><i data-lucide="history" class="w-5 h-5 mr-2 text-fluent-accent"></i> Solicitudes Bancarizadas</h3>
                     </div>
+                    <div class="px-6 py-2 border-b border-fluent-border bg-black/5">
+                        <input type="text" id="search-bancarizados" placeholder="Buscar..." class="fluent-input text-xs">
+                    </div>
                     <div class="flex-1 overflow-auto p-0">
                         <table class="w-full text-left text-sm text-slate-300">
                             <thead class="text-xs uppercase bg-black/20 text-slate-400 font-bold tracking-wider sticky top-0 backdrop-blur-md">
@@ -237,6 +246,7 @@
                                     <th class="px-6 py-4">Monto</th>
                                     <th class="px-6 py-4">Sustentos</th>
                                     <th class="px-6 py-4 text-right">Evidencias</th>
+                                    <th class="px-6 py-4 text-right">Acción</th>
                                 </tr>
                             </thead>
                             <tbody id="table-body-bancarizados" class="divide-y divide-white/5"></tbody>
@@ -253,6 +263,9 @@
                         <h3 class="fluent-title mb-0"><i data-lucide="users" class="w-5 h-5 mr-2 text-fluent-accent"></i> Proveedores</h3>
                         <button id="btn-add-proveedor"
                             class="text-xs font-bold uppercase tracking-wider bg-fluent-accent text-slate-950 px-4 py-2 rounded-lg hover:bg-[#80d8ff] transition-colors">Añadir</button>
+                    </div>
+                    <div class="px-6 py-2 border-b border-fluent-border bg-black/5">
+                        <input type="text" id="search-proveedores" placeholder="Buscar..." class="fluent-input text-xs">
                     </div>
                     <div class="flex-1 overflow-auto p-0">
                         <table class="w-full text-left text-sm text-slate-300">
@@ -282,6 +295,9 @@
                         <button id="btn-add-banco"
                             class="text-xs font-bold uppercase tracking-wider bg-fluent-accent text-slate-950 px-4 py-2 rounded-lg hover:bg-[#80d8ff] transition-colors">Añadir</button>
                     </div>
+                    <div class="px-6 py-2 border-b border-fluent-border bg-black/5">
+                        <input type="text" id="search-bancos" placeholder="Buscar..." class="fluent-input text-xs">
+                    </div>
                     <div class="flex-1 overflow-auto p-0">
                         <table class="w-full text-left text-sm text-slate-300">
                             <thead class="text-xs uppercase bg-black/20 text-slate-400 font-bold tracking-wider sticky top-0 backdrop-blur-md">
@@ -302,6 +318,9 @@
                         <button id="btn-add-sede"
                             class="text-xs font-bold uppercase tracking-wider bg-fluent-accent text-slate-950 px-4 py-2 rounded-lg hover:bg-[#80d8ff] transition-colors">Añadir</button>
                     </div>
+                    <div class="px-6 py-2 border-b border-fluent-border bg-black/5">
+                        <input type="text" id="search-sedes" placeholder="Buscar..." class="fluent-input text-xs">
+                    </div>
                     <div class="flex-1 overflow-auto p-0">
                         <table class="w-full text-left text-sm text-slate-300">
                             <thead class="text-xs uppercase bg-black/20 text-slate-400 font-bold tracking-wider sticky top-0 backdrop-blur-md">
@@ -321,6 +340,9 @@
                         <h3 class="fluent-title mb-0"><i data-lucide="shield" class="w-5 h-5 mr-2 text-fluent-accent"></i> Usuarios</h3>
                         <button id="btn-add-usuario"
                             class="text-xs font-bold uppercase tracking-wider bg-fluent-accent text-slate-950 px-4 py-2 rounded-lg hover:bg-[#80d8ff] transition-colors">Nuevo</button>
+                    </div>
+                    <div class="px-6 py-2 border-b border-fluent-border bg-black/5">
+                        <input type="text" id="search-usuarios" placeholder="Buscar..." class="fluent-input text-xs">
                     </div>
                     <div class="flex-1 overflow-auto p-0">
                         <table class="w-full text-left text-sm text-slate-300">

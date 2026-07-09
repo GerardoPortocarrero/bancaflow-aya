@@ -48,7 +48,8 @@ CREATE TABLE IF NOT EXISTS public.solicitudes (
     evidencias_bancarizacion JSONB DEFAULT '[]'::jsonb,
     bancarizado_por UUID REFERENCES auth.users(id),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    deleted_at TIMESTAMP WITH TIME ZONE DEFAULT NULL
 );
 
 -- 6. SEGURIDAD (Row Level Security)
