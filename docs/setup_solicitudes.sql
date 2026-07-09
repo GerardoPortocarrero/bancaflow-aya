@@ -82,10 +82,23 @@ CREATE POLICY "Admin puede actualizar sedes"
     USING (EXISTS (SELECT 1 FROM perfiles WHERE id = auth.uid() AND rol = 'ADMINISTRADOR'));
 
 -- 9. POLÍTICAS PROVEEDORES
-CREATE POLICY "CFO y Admin pueden gestionar proveedores"
-    ON public.proveedores FOR ALL TO authenticated
-    USING (EXISTS (SELECT 1 FROM perfiles WHERE id = auth.uid() AND rol IN ('CFO', 'ADMINISTRADOR')))
+-- Todos los autenticados pueden VER proveedores (necesario para selects y joins en solicitudes)
+CREATE POLICY "Todos pueden ver proveedores"
+    ON public.proveedores FOR SELECT TO authenticated
+    USING (true);
+
+-- Solo CFO y ADMIN pueden crear, actualizar y eliminar proveedores
+CREATE POLICY "CFO y Admin pueden insertar proveedores"
+    ON public.proveedores FOR INSERT TO authenticated
     WITH CHECK (EXISTS (SELECT 1 FROM perfiles WHERE id = auth.uid() AND rol IN ('CFO', 'ADMINISTRADOR')));
+
+CREATE POLICY "CFO y Admin pueden actualizar proveedores"
+    ON public.proveedores FOR UPDATE TO authenticated
+    USING (EXISTS (SELECT 1 FROM perfiles WHERE id = auth.uid() AND rol IN ('CFO', 'ADMINISTRADOR')));
+
+CREATE POLICY "CFO y Admin pueden eliminar proveedores"
+    ON public.proveedores FOR DELETE TO authenticated
+    USING (EXISTS (SELECT 1 FROM perfiles WHERE id = auth.uid() AND rol IN ('CFO', 'ADMINISTRADOR')));
 
 -- 10. POLÍTICAS SOLICITUDES
 -- Usuarios ven sus propias solicitudes

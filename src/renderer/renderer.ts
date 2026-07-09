@@ -1,5 +1,5 @@
 declare const lucide: any;
-const { createIcons, LayoutDashboard, FilePlus, History: HistoryIcon, Bell, Settings, LogOut, Inbox, Users, Shield, Landmark, Building } = lucide;
+const { createIcons, LayoutDashboard, FilePlus, History: HistoryIcon, Bell, Settings, LogOut, Inbox, Users, Shield, Landmark, Building, CircleCheck } = lucide;
 
 interface ArchivoSubido {
   name: string;
@@ -39,6 +39,7 @@ interface IElectronAPI {
     eliminarSede: (id: string) => Promise<{ success: boolean; error?: string }>;
     actualizarProveedor: (id: string, datos: any) => Promise<{ success: boolean; proveedor?: any; error?: string }>;
     eliminarProveedor: (id: string) => Promise<{ success: boolean; error?: string }>;
+    listarPerfiles: () => Promise<{ success: boolean; perfiles?: any[]; error?: string }>;
     actualizarUsuario: (id: string, nombre: string, apellido: string, rol: string) => Promise<{ success: boolean; error?: string }>;
     eliminarUsuario: (id: string) => Promise<{ success: boolean; error?: string }>;
   };
@@ -48,7 +49,7 @@ interface Window { electronAPI: IElectronAPI; }
 
 function initIcons() {
   createIcons({
-    icons: { LayoutDashboard, FilePlus, History, Bell, Settings, LogOut, Inbox, Users, Shield, Landmark, Building }
+    icons: { LayoutDashboard, FilePlus, History: HistoryIcon, Bell, Settings, LogOut, Inbox, Users, Shield, Landmark, Building, CircleCheck }
   });
 }
 initIcons();
@@ -58,6 +59,8 @@ let currentUser: any = null;
 let editingSolicitudId: string | null = null;
 let solicitudFiles: File[] = [];
 let bancarizarFiles: File[] = [];
+let proveedorMap = new Map<string, any>();
+let perfilMap = new Map<string, any>();
 
 // --- DOM REFS ---
 const loginScreen = document.getElementById('login-screen');
@@ -216,7 +219,7 @@ async function cargarMisSolicitudes() {
   tbody.innerHTML = solicitudes.map((s: any) => `
     <tr class="hover:bg-white/5 transition-colors">
       <td class="px-6 py-4">${new Date(s.created_at).toLocaleDateString()}</td>
-      <td class="px-6 py-4 font-bold text-white">${s.proveedores?.nombre_razon_social || '-'}</td>
+      <td class="px-6 py-4 font-bold text-white">${(proveedorMap.get(s.proveedor_id)?.nombre_razon_social) || '-'}</td>
       <td class="px-6 py-4 font-bold text-emerald-400">S/ ${Number(s.monto).toFixed(2)}</td>
       <td class="px-6 py-4">
         <span class="px-2 py-1 rounded text-[10px] font-bold tracking-wider ${s.estado === 'PENDIENTE' ? 'bg-amber-400/10 text-amber-400 border border-amber-400/20' : 'bg-red-400/10 text-red-400 border border-red-400/20'}">${s.estado}</span>
@@ -236,7 +239,7 @@ async function cargarMisSolicitudes() {
 // --- MODAL SOLICITUD (Nueva / Editar) ---
 async function abrirModalSolicitud(solicitudId: string | null = null) {
   editingSolicitudId = solicitudId;
-  solicitudFiles = [];
+  solicitudFiles.length = 0;
   const titleEl = document.getElementById('modal-solicitud-title');
   const btnSubmit = document.getElementById('btn-submit-solicitud');
   if (titleEl) titleEl.textContent = solicitudId ? 'Editar Solicitud' : 'Nueva Solicitud';
@@ -358,8 +361,8 @@ async function cargarBandejaCFO() {
   tbody.innerHTML = solicitudes.map((s: any) => `
     <tr class="hover:bg-white/5 transition-colors">
       <td class="px-6 py-4">${new Date(s.created_at).toLocaleDateString()}</td>
-      <td class="px-6 py-4 font-bold text-white">${s.perfiles?.nombre || 'N/A'} ${s.perfiles?.apellido || ''}</td>
-      <td class="px-6 py-4">${s.proveedores?.nombre_razon_social || '-'}</td>
+      <td class="px-6 py-4 font-bold text-white">${(perfilMap.get(s.usuario_id)?.nombre) || 'N/A'} ${(perfilMap.get(s.usuario_id)?.apellido) || ''}</td>
+      <td class="px-6 py-4">${(proveedorMap.get(s.proveedor_id)?.nombre_razon_social) || '-'}</td>
       <td class="px-6 py-4 font-bold text-emerald-400">S/ ${Number(s.monto).toFixed(2)}</td>
       <td class="px-6 py-4">
         <span class="px-2 py-1 rounded text-[10px] font-bold tracking-wider ${s.estado === 'PENDIENTE' ? 'bg-amber-400/10 text-amber-400 border border-amber-400/20' : 'bg-red-400/10 text-red-400 border border-red-400/20'}">${s.estado}</span>
@@ -420,7 +423,7 @@ let bancarizarSolicitudId: string | null = null;
 
 function abrirModalBancarizar(id: string | null) {
   bancarizarSolicitudId = id;
-  bancarizarFiles = [];
+  bancarizarFiles.length = 0;
   document.getElementById('file-list-bancarizar')!.innerHTML = '';
   document.getElementById('submit-error-bancarizar')?.classList.add('hidden');
   document.getElementById('upload-progress-bancarizar')?.classList.add('hidden');
@@ -497,8 +500,8 @@ async function cargarBancarizados() {
   tbody.innerHTML = solicitudes.map((s: any) => `
     <tr class="hover:bg-white/5 transition-colors">
       <td class="px-6 py-4">${new Date(s.updated_at).toLocaleDateString()}</td>
-      <td class="px-6 py-4 font-bold text-white">${s.perfiles?.nombre || 'N/A'} ${s.perfiles?.apellido || ''}</td>
-      <td class="px-6 py-4">${s.proveedores?.nombre_razon_social || '-'}</td>
+      <td class="px-6 py-4 font-bold text-white">${(perfilMap.get(s.usuario_id)?.nombre) || 'N/A'} ${(perfilMap.get(s.usuario_id)?.apellido) || ''}</td>
+      <td class="px-6 py-4">${(proveedorMap.get(s.proveedor_id)?.nombre_razon_social) || '-'}</td>
       <td class="px-6 py-4 font-bold text-emerald-400">S/ ${Number(s.monto).toFixed(2)}</td>
       <td class="px-6 py-4">${renderArchivos(s.archivos)}</td>
       <td class="px-6 py-4 text-right">${renderArchivos(s.evidencias_bancarizacion)}</td>
@@ -531,11 +534,19 @@ async function cargarProveedoresSelect(res?: any) {
 }
 
 async function cargarProveedores() {
-  const [res, bancoMap, sedeMap] = await Promise.all([
+  const [res, bancoMap, sedeMap, perfilesRes] = await Promise.all([
     window.electronAPI.db.listarProveedores(),
     getBancoMap(),
     getSedeMap(),
+    window.electronAPI.db.listarPerfiles(),
   ]);
+  proveedorMap = new Map();
+  if (res.success) (res.proveedores || []).forEach((p: any) => proveedorMap.set(p.id, p));
+  if (perfilesRes.success) {
+    const pm = new Map<string, any>();
+    (perfilesRes.perfiles || []).forEach((p: any) => pm.set(p.id, p));
+    perfilMap = pm;
+  }
   await cargarProveedoresSelect(res);
   const tbody = document.getElementById('table-body-proveedores');
   if (tbody && res.success) {
@@ -779,6 +790,29 @@ function closeModal(id: string) {
   if (el) el.classList.add('hidden');
 }
 
+function resetAllForms() {
+  const forms = ['form-solicitud', 'form-proveedor', 'form-banco', 'form-sede', 'form-usuario', 'form-observar', 'form-bancarizar'];
+  forms.forEach(id => {
+    const form = document.getElementById(id) as HTMLFormElement;
+    if (form) {
+      form.reset();
+      form.removeAttribute('data-editing');
+    }
+  });
+  document.getElementById('file-list-solicitud')!.innerHTML = '';
+  document.getElementById('file-list-bancarizar')!.innerHTML = '';
+  document.getElementById('submit-error-solicitud')?.classList.add('hidden');
+  document.getElementById('submit-error-bancarizar')?.classList.add('hidden');
+  document.getElementById('upload-progress-solicitud')?.classList.add('hidden');
+  document.getElementById('upload-progress-bancarizar')?.classList.add('hidden');
+  document.getElementById('alert-detraccion')?.classList.add('hidden');
+  (document.getElementById('usr-correo') as HTMLInputElement).disabled = false;
+  (document.getElementById('usr-contrasena') as HTMLInputElement).disabled = false;
+  solicitudFiles.length = 0;
+  bancarizarFiles.length = 0;
+  editingSolicitudId = null;
+}
+
 // --- NAVEGACIÓN SPA ---
 function setupNavigation() {
   const navLinks = document.querySelectorAll('.nav-link');
@@ -800,6 +834,8 @@ function setupNavigation() {
     link.addEventListener('click', (e) => {
       e.preventDefault();
       const targetId = link.getAttribute('data-target');
+
+      resetAllForms();
 
       navLinks.forEach(l => {
         l.classList.remove('nav-link-active');

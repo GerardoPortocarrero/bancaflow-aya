@@ -27,6 +27,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     actualizarSede: (id: string, nombre: string) => ipcRenderer.invoke('db:actualizar-sede', { id, nombre }),
     eliminarSede: (id: string) => ipcRenderer.invoke('db:eliminar-sede', { id }),
     listarProveedores: () => ipcRenderer.invoke('db:listar-proveedores'),
+    listarPerfiles: () => ipcRenderer.invoke('db:listar-perfiles'),
     crearProveedor: (datos: any) => ipcRenderer.invoke('db:crear-proveedor', datos),
     actualizarProveedor: (id: string, datos: any) => ipcRenderer.invoke('db:actualizar-proveedor', { id, ...datos }),
     eliminarProveedor: (id: string) => ipcRenderer.invoke('db:eliminar-proveedor', { id }),

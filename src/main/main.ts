@@ -19,6 +19,9 @@ const googleFolderId = process.env.GOOGLE_DRIVE_FOLDER_ID || '';
 let drive: any = null;
 let driveErrorMsg = '';
 
+// Cache de sesión en memoria para evitar depender de persistSession de Supabase
+let currentSession: { userId: string; role: string } | null = null;
+
 if (!googleEmail || !googlePrivateKey || !googleFolderId) {
   driveErrorMsg = 'Servicio de Google Drive no configurado. Falta GOOGLE_SERVICE_ACCOUNT_EMAIL, GOOGLE_PRIVATE_KEY o GOOGLE_DRIVE_FOLDER_ID en el archivo .env';
   console.warn(`⚠️ Alerta BancaFlow: ${driveErrorMsg}`);
@@ -136,6 +139,7 @@ async function uploadToDrive(buffer: Buffer, mimeType: string, fileName: string)
 }
 
 async function getCurrentUserRole(): Promise<string | null> {
+  if (currentSession) return currentSession.role;
   const { data: sessionData } = await supabase.auth.getSession();
   if (!sessionData.session) return null;
   const { data: perfil } = await supabase
@@ -147,6 +151,7 @@ async function getCurrentUserRole(): Promise<string | null> {
 }
 
 async function getCurrentUserId(): Promise<string | null> {
+  if (currentSession) return currentSession.userId;
   const { data: sessionData } = await supabase.auth.getSession();
   return sessionData.session?.user?.id || null;
 }
@@ -170,20 +175,26 @@ ipcMain.handle('auth:login', async (_event, { correo, contrasena }) => {
       .eq('id', data.user?.id)
       .single();
 
+    const userId = data.user?.id || '';
+    const userRole = perfilError ? 'RRHH' : perfil.rol;
+
+    // Cachear sesión en memoria
+    currentSession = { userId, role: userRole };
+
     if (perfilError) {
       return {
         success: true,
-        user: { id: data.user?.id, email: data.user?.email, nombre: 'Usuario', rol: 'RRHH' }
+        user: { id: userId, email: data.user?.email, nombre: 'Usuario', rol: userRole }
       };
     }
 
     return {
       success: true,
       user: {
-        id: data.user?.id,
+        id: userId,
         email: data.user?.email,
         nombre: `${perfil.nombre} ${perfil.apellido}`,
-        rol: perfil.rol
+        rol: userRole
       }
     };
   } catch (err: any) {
@@ -192,6 +203,7 @@ ipcMain.handle('auth:login', async (_event, { correo, contrasena }) => {
 });
 
 ipcMain.handle('auth:logout', async () => {
+  currentSession = null;
   if (!supabase) return { success: true };
   const { error } = await supabase.auth.signOut();
   return { success: !error, error: error?.message };
@@ -199,6 +211,16 @@ ipcMain.handle('auth:logout', async () => {
 
 ipcMain.handle('auth:get-session', async () => {
   if (!supabase) return { session: null };
+  // Usar cache primero
+  if (currentSession) {
+    const { data: perfil } = await supabase
+      .from('perfiles')
+      .select('rol, nombre, apellido')
+      .eq('id', currentSession.userId)
+      .single();
+    if (!perfil) return { session: null };
+    return { session: { id: currentSession.userId, email: '', nombre: `${perfil.nombre} ${perfil.apellido}`, rol: perfil.rol } };
+  }
   const { data } = await supabase.auth.getSession();
   if (!data.session) return { session: null };
 
@@ -413,9 +435,9 @@ ipcMain.handle('db:eliminar-sede', async (_event, { id }) => {
 // --- PROVEEDORES ---
 
 ipcMain.handle('db:listar-proveedores', async () => {
-  if (!supabase) return { success: false, error: supabaseErrorMsg || 'Base de datos no configurada.' };
+  if (!supabaseAdmin) return { success: false, error: 'Base de datos no configurada.' };
   try {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('proveedores')
       .select('*')
       .order('nombre_razon_social', { ascending: true });
@@ -427,9 +449,9 @@ ipcMain.handle('db:listar-proveedores', async () => {
 });
 
 ipcMain.handle('db:crear-proveedor', async (_event, datos) => {
-  if (!supabase) return { success: false, error: supabaseErrorMsg || 'Base de datos no configurada.' };
+  if (!supabaseAdmin) return { success: false, error: 'Falta SUPABASE_SERVICE_KEY en .env para esta acción.' };
   try {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('proveedores')
       .insert({
         nombre_razon_social: datos.nombre_razon_social,
@@ -470,15 +492,27 @@ ipcMain.handle('db:eliminar-proveedor', async (_event, { id }) => {
   }
 });
 
+ipcMain.handle('db:listar-perfiles', async () => {
+  if (!supabaseAdmin) return { success: false, error: 'Base de datos no configurada.' };
+  try {
+    const { data, error } = await supabaseAdmin.from('perfiles').select('id, nombre, apellido, rol');
+    if (error) return { success: false, error: error.message };
+    return { success: true, perfiles: data };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Error al listar perfiles' };
+  }
+});
+
 // --- SOLICITUDES ---
 
 ipcMain.handle('db:crear-solicitud', async (_event, datos) => {
   if (!supabase) return { success: false, error: supabaseErrorMsg || 'Base de datos no configurada.' };
+  if (!supabaseAdmin) return { success: false, error: 'Base de datos no disponible.' };
   try {
     const userId = await getCurrentUserId();
     if (!userId) return { success: false, error: 'No hay sesión activa. Inicie sesión nuevamente.' };
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('solicitudes')
       .insert({
         usuario_id: userId,
@@ -489,7 +523,7 @@ ipcMain.handle('db:crear-solicitud', async (_event, datos) => {
         archivos: datos.archivos || [],
         estado: 'PENDIENTE'
       })
-      .select(`*, proveedores:proveedor_id (nombre_razon_social)`)
+      .select()
       .single();
 
     if (error) return { success: false, error: error.message };
@@ -501,13 +535,14 @@ ipcMain.handle('db:crear-solicitud', async (_event, datos) => {
 
 ipcMain.handle('db:listar-solicitudes', async (_event, { vista, rol }) => {
   if (!supabase) return { success: false, error: supabaseErrorMsg || 'Base de datos no configurada.' };
+  if (!supabaseAdmin) return { success: false, error: 'Base de datos no disponible.' };
   try {
     const userId = await getCurrentUserId();
     if (!userId) return { success: false, error: 'No hay sesión activa.' };
 
-    let query = supabase
+    let query = supabaseAdmin
       .from('solicitudes')
-      .select(`*, perfiles:usuario_id (nombre, apellido), proveedores:proveedor_id (nombre_razon_social)`)
+      .select('*')
       .order('created_at', { ascending: false });
 
     if (vista === 'cfo-bandeja') {
@@ -532,9 +567,9 @@ ipcMain.handle('db:listar-solicitudes', async (_event, { vista, rol }) => {
 });
 
 ipcMain.handle('db:observar-solicitud', async (_event, { id, motivo }) => {
-  if (!supabase) return { success: false, error: supabaseErrorMsg || 'Base de datos no configurada.' };
+  if (!supabaseAdmin) return { success: false, error: 'Base de datos no disponible.' };
   try {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('solicitudes')
       .update({ estado: 'OBSERVADO', observacion_motivo: motivo })
       .eq('id', id)
@@ -549,10 +584,10 @@ ipcMain.handle('db:observar-solicitud', async (_event, { id, motivo }) => {
 });
 
 ipcMain.handle('db:bancarizar-solicitud', async (_event, { id, evidencias }) => {
-  if (!supabase) return { success: false, error: supabaseErrorMsg || 'Base de datos no configurada.' };
+  if (!supabaseAdmin) return { success: false, error: 'Base de datos no disponible.' };
   try {
     const userId = await getCurrentUserId();
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('solicitudes')
       .update({
         estado: 'BANCARIZADO',
@@ -560,7 +595,7 @@ ipcMain.handle('db:bancarizar-solicitud', async (_event, { id, evidencias }) => 
         bancarizado_por: userId
       })
       .eq('id', id)
-      .select(`*, proveedores:proveedor_id (nombre_razon_social)`)
+      .select()
       .single();
 
     if (error) return { success: false, error: error.message };
@@ -571,7 +606,7 @@ ipcMain.handle('db:bancarizar-solicitud', async (_event, { id, evidencias }) => 
 });
 
 ipcMain.handle('db:actualizar-solicitud', async (_event, { id, descripcion, proveedorId, monto, archivos }) => {
-  if (!supabase) return { success: false, error: supabaseErrorMsg || 'Base de datos no configurada.' };
+  if (!supabaseAdmin) return { success: false, error: 'Base de datos no disponible.' };
   try {
     const updateData: any = { estado: 'PENDIENTE', observacion_motivo: null };
     if (descripcion !== undefined) updateData.descripcion = descripcion;
@@ -579,11 +614,11 @@ ipcMain.handle('db:actualizar-solicitud', async (_event, { id, descripcion, prov
     if (monto !== undefined) updateData.monto = monto;
     if (archivos !== undefined) updateData.archivos = archivos;
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('solicitudes')
       .update(updateData)
       .eq('id', id)
-      .select(`*, proveedores:proveedor_id (nombre_razon_social)`)
+      .select()
       .single();
 
     if (error) return { success: false, error: error.message };
