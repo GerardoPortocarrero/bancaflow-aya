@@ -1,5 +1,7 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, shell } from 'electron';
 import * as path from 'path';
+import * as fs from 'fs';
+import * as http from 'http';
 import { createClient } from '@supabase/supabase-js';
 import * as dotenv from 'dotenv';
 import { google } from 'googleapis';
@@ -12,8 +14,8 @@ const supabaseUrl = process.env.SUPABASE_URL || '';
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || '';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY || '';
 
-const googleEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || '';
-const googlePrivateKey = process.env.GOOGLE_PRIVATE_KEY || '';
+const googleClientId = process.env.GOOGLE_CLIENT_ID || '';
+const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET || '';
 const googleFolderId = process.env.GOOGLE_DRIVE_FOLDER_ID || '';
 
 let drive: any = null;
@@ -22,22 +24,121 @@ let driveErrorMsg = '';
 // Cache de sesión en memoria para evitar depender de persistSession de Supabase
 let currentSession: { userId: string; role: string } | null = null;
 
-if (!googleEmail || !googlePrivateKey || !googleFolderId) {
-  driveErrorMsg = 'Servicio de Google Drive no configurado. Falta GOOGLE_SERVICE_ACCOUNT_EMAIL, GOOGLE_PRIVATE_KEY o GOOGLE_DRIVE_FOLDER_ID en el archivo .env';
-  console.warn(`⚠️ Alerta BancaFlow: ${driveErrorMsg}`);
-} else {
+const SCOPES = ['https://www.googleapis.com/auth/drive'];
+let driveInitPromise: Promise<boolean> | null = null;
+
+async function loadExistingToken(): Promise<boolean> {
+  if (!googleClientId || !googleClientSecret || !googleFolderId) return false;
+  const tokenPath = path.join(app.getPath('userData'), 'drive_tokens.json');
+  if (!fs.existsSync(tokenPath)) return false;
   try {
-    const formattedKey = googlePrivateKey.replace(/\\n/g, '\n');
-    const auth = new google.auth.JWT({
-      email: googleEmail,
-      key: formattedKey,
-      scopes: ['https://www.googleapis.com/auth/drive'],
+    const tokens = JSON.parse(fs.readFileSync(tokenPath, 'utf-8'));
+    const oauth2Client = new google.auth.OAuth2(googleClientId, googleClientSecret);
+    oauth2Client.setCredentials(tokens);
+    oauth2Client.on('tokens', (newTokens: any) => {
+      try {
+        const stored = JSON.parse(fs.readFileSync(tokenPath, 'utf-8'));
+        Object.assign(stored, newTokens);
+        fs.writeFileSync(tokenPath, JSON.stringify(stored));
+      } catch { /* ignore */ }
     });
-    drive = google.drive({ version: 'v3', auth });
+    drive = google.drive({ version: 'v3', auth: oauth2Client });
+    driveErrorMsg = '';
+    return true;
   } catch (err: any) {
-    driveErrorMsg = `Error al inicializar Google Drive API: ${err.message}`;
-    console.error(err);
+    driveErrorMsg = `Error al cargar token: ${err.message}`;
+    return false;
   }
+}
+
+async function initDrive(forceReauth = false): Promise<boolean> {
+  if (!googleClientId || !googleClientSecret || !googleFolderId) {
+    driveErrorMsg = 'Falta GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET o GOOGLE_DRIVE_FOLDER_ID en .env';
+    return false;
+  }
+
+  if (!forceReauth) {
+    if (await loadExistingToken()) return true;
+    if (driveInitPromise) return driveInitPromise;
+  }
+
+  const tokenPath = path.join(app.getPath('userData'), 'drive_tokens.json');
+
+  driveInitPromise = new Promise<boolean>((resolve) => {
+    let port = 0;
+    let oauth2Client: any;
+    let resolved = false;
+
+    const server = http.createServer(async (req, res) => {
+      if (resolved || !port) return;
+      try {
+        const parsedUrl = new URL(req.url!, `http://localhost:${port}`);
+        const code = parsedUrl.searchParams.get('code');
+        if (code) {
+          res.writeHead(200, { 'Content-Type': 'text/html' });
+          res.end('<html><body style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;margin:0"><h1 style="color:#166534">Autenticacion exitosa. Puedes cerrar esta ventana.</h1></body></html>');
+          resolved = true;
+          clearTimeout(timeout);
+          server.close();
+
+          const { tokens } = await oauth2Client.getToken(code);
+          oauth2Client.setCredentials(tokens);
+          oauth2Client.on('tokens', (newTokens: any) => {
+            try {
+              const stored = JSON.parse(fs.readFileSync(tokenPath, 'utf-8'));
+              Object.assign(stored, newTokens);
+              fs.writeFileSync(tokenPath, JSON.stringify(stored));
+            } catch { /* ignore */ }
+          });
+          fs.writeFileSync(tokenPath, JSON.stringify(tokens));
+          drive = google.drive({ version: 'v3', auth: oauth2Client });
+          driveErrorMsg = '';
+          resolve(true);
+        } else {
+          const errMsg = parsedUrl.searchParams.get('error') || 'No se recibio codigo de autorizacion';
+          res.writeHead(400);
+          res.end(`Error: ${errMsg}`);
+          resolved = true;
+          clearTimeout(timeout);
+          server.close();
+          driveErrorMsg = errMsg;
+          resolve(false);
+        }
+      } catch (err: any) {
+        if (resolved) return;
+        resolved = true;
+        driveErrorMsg = `Error en autenticacion OAuth: ${err.message}`;
+        if (!res.headersSent) {
+          res.writeHead(500);
+          res.end('Error de autenticacion.');
+        }
+        clearTimeout(timeout);
+        server.close();
+        resolve(false);
+      }
+    });
+
+    const timeout = setTimeout(() => {
+      if (resolved) return;
+      resolved = true;
+      server.close();
+      driveErrorMsg = 'Tiempo de espera agotado. Vuelve a intentar desde "Probar conexion".';
+      resolve(false);
+    }, 5 * 60 * 1000);
+
+    server.listen(0, () => {
+      port = (server.address() as any).port;
+      oauth2Client = new google.auth.OAuth2(googleClientId, googleClientSecret, `http://localhost:${port}`);
+      const authUrl = oauth2Client.generateAuthUrl({
+        access_type: 'offline',
+        scope: SCOPES,
+        prompt: 'consent',
+      });
+      shell.openExternal(authUrl);
+    });
+  });
+
+  return driveInitPromise;
 }
 
 let supabase: any = null;
@@ -319,7 +420,12 @@ ipcMain.handle('auth:eliminar-usuario', async (_event, { id }) => {
 
 ipcMain.handle('drive:test-connection', async () => {
   if (!drive) {
-    return { success: false, error: driveErrorMsg || 'Servicio de Google Drive no configurado.' };
+    if (googleClientId && googleClientSecret && googleFolderId) {
+      await initDrive();
+    }
+    if (!drive) {
+      return { success: false, error: driveErrorMsg || 'Servicio de Google Drive no configurado.' };
+    }
   }
   try {
     const response = await drive.files.get({
@@ -533,14 +639,15 @@ ipcMain.handle('db:crear-solicitud', async (_event, datos) => {
 });
 
 ipcMain.handle('db:listar-solicitudes', async (_event, { vista, rol }) => {
-  if (!supabase) return { success: false, error: supabaseErrorMsg || 'Base de datos no configurada.' };
+  if (!supabaseAdmin) return { success: false, error: 'Base de datos no disponible.' };
   try {
     const userId = await getCurrentUserId();
     if (!userId) return { success: false, error: 'No hay sesión activa.' };
 
-    let query = supabase
+    let query = supabaseAdmin
       .from('solicitudes')
       .select('*')
+      .is('deleted_at', null)
       .order('created_at', { ascending: false });
 
     if (vista === 'cfo-bandeja') {
@@ -642,6 +749,7 @@ ipcMain.handle('db:eliminar-solicitud', async (_event, { id }) => {
 
 app.whenReady().then(() => {
   createWindow();
+  loadExistingToken(); // Carga token existente si lo hay (sin abrir navegador)
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();

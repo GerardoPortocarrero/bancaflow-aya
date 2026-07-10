@@ -119,25 +119,32 @@ function setVis(id: string, show: boolean) {
 }
 
 async function verificarGoogleDrive() {
+  const statusEl = document.getElementById('drive-status');
   const statusDot = document.getElementById('drive-status-dot');
   const statusText = document.getElementById('drive-status-text');
   if (!statusDot || !statusText) return;
+  const setStatus = (dotClass: string, text: string, textClass: string) => {
+    statusDot.className = dotClass;
+    statusText.textContent = text;
+    statusText.className = textClass;
+  };
+  setStatus('w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse', 'Verificando Drive...', 'text-[10px] font-bold text-amber-400');
   try {
     const resultado = await window.electronAPI.drive.testConnection();
     if (resultado.success) {
-      statusDot.className = 'w-1.5 h-1.5 rounded-full bg-emerald-400';
-      statusText.textContent = `Drive: Conectado (${resultado.folder?.name})`;
-      statusText.className = 'text-[10px] font-bold text-emerald-400';
+      setStatus('w-1.5 h-1.5 rounded-full bg-emerald-400', `Drive: Conectado (${resultado.folder?.name})`, 'text-[10px] font-bold text-emerald-400');
     } else {
-      statusDot.className = 'w-1.5 h-1.5 rounded-full bg-red-400';
-      statusText.textContent = 'Drive: Sin Configurar';
-      statusText.className = 'text-[10px] font-bold text-red-400';
+      setStatus('w-1.5 h-1.5 rounded-full bg-red-400', `Drive: ${resultado.error || 'Sin Configurar'}`, 'text-[10px] font-bold text-red-400');
     }
-  } catch (err) {
-    statusDot.className = 'w-1.5 h-1.5 rounded-full bg-red-400';
-    statusText.textContent = 'Drive: Error';
-    statusText.className = 'text-[10px] font-bold text-red-400';
+  } catch (err: any) {
+    setStatus('w-1.5 h-1.5 rounded-full bg-red-400', `Drive: Error (${err.message || 'desconocido'})`, 'text-[10px] font-bold text-red-400');
   }
+}
+
+// Al hacer clic en el status de Drive, reintenta la conexión
+const driveStatusBtn = document.getElementById('drive-status');
+if (driveStatusBtn) {
+  driveStatusBtn.addEventListener('click', verificarGoogleDrive);
 }
 
 async function mostrarApp(user: any) {
@@ -163,6 +170,32 @@ async function mostrarApp(user: any) {
     const dashboardLink = document.querySelector('[data-target="view-dashboard"]') as HTMLElement;
     if (dashboardLink) dashboardLink.click();
   }
+
+  iniciarAutoRefresh();
+}
+
+// --- AUTO-REFRESH cada 10 segundos ---
+let autoRefreshTimer: any = null;
+
+function iniciarAutoRefresh() {
+  if (autoRefreshTimer) clearInterval(autoRefreshTimer);
+  autoRefreshTimer = setInterval(async () => {
+    const activeLink = document.querySelector('.nav-link-active');
+    const targetId = activeLink?.getAttribute('data-target');
+    if (!targetId || !currentUser) return;
+
+    try {
+      if (targetId === 'view-cfo-bandeja' && currentUser.rol === 'CFO') {
+        await cargarBandejaCFO();
+      } else if (targetId === 'view-mis-solicitudes') {
+        await cargarMisSolicitudes();
+      } else if (targetId === 'view-bancarizados') {
+        await cargarBancarizados();
+      } else if (targetId === 'view-dashboard') {
+        await cargarDashboard();
+      }
+    } catch { /* silencioso */ }
+  }, 10000);
 }
 
 // --- CARGA DE DATOS ---
@@ -852,7 +885,7 @@ function setupNavigation() {
   };
 
   navLinks.forEach(link => {
-    link.addEventListener('click', (e) => {
+    link.addEventListener('click', async (e) => {
       e.preventDefault();
       const targetId = link.getAttribute('data-target');
 
@@ -871,6 +904,25 @@ function setupNavigation() {
         if (section.id === targetId) section.classList.remove('hidden');
         else section.classList.add('hidden');
       });
+
+      // Recargar datos según la vista seleccionada
+      if (targetId === 'view-dashboard') {
+        await cargarDashboard();
+      } else if (targetId === 'view-mis-solicitudes') {
+        await cargarMisSolicitudes();
+      } else if (targetId === 'view-cfo-bandeja' && currentUser?.rol === 'CFO') {
+        await cargarBandejaCFO();
+      } else if (targetId === 'view-bancarizados') {
+        await cargarBancarizados();
+      } else if (targetId === 'view-proveedores') {
+        await cargarProveedores();
+      } else if (targetId === 'view-bancos') {
+        await cargarBancos();
+      } else if (targetId === 'view-sedes') {
+        await cargarSedes();
+      } else if (targetId === 'view-usuarios' && currentUser?.rol === 'ADMINISTRADOR') {
+        await cargarUsuarios();
+      }
     });
   });
 }
