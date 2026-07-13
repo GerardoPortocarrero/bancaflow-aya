@@ -25,3 +25,6 @@ yarn-error.log*
 # Sistema
 Thumbs.db
 .DS_Store
+
+.agents/
+skills-lock.json

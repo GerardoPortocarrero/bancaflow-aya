@@ -147,6 +147,71 @@ if (driveStatusBtn) {
   driveStatusBtn.addEventListener('click', verificarGoogleDrive);
 }
 
+// --- TOAST NOTIFICATIONS ---
+function toast(message: string, type: 'success' | 'error' | 'info' = 'info', duration = 4000) {
+  const container = document.getElementById('toast-container');
+  if (!container) return;
+  const icons: any = { success: 'circle-check', error: 'alert-circle', info: 'info' };
+  const el = document.createElement('div');
+  el.className = `toast toast-${type}`;
+  el.innerHTML = `<i data-lucide="${icons[type]}" class="w-4 h-4 shrink-0"></i><span>${message}</span>`;
+  container.appendChild(el);
+  createIcons({ icons: { [icons[type]]: lucide[icons[type]] }, attrs: { width: '16', height: '16' } });
+  setTimeout(() => { el.classList.add('toast-out'); setTimeout(() => el.remove(), 300); }, duration);
+}
+
+function confirmDialog(message: string, confirmText = 'Eliminar', danger = true): Promise<boolean> {
+  return new Promise((resolve) => {
+    const overlay = document.getElementById('confirm-overlay');
+    if (!overlay) { resolve(confirm(message)); return; }
+    overlay.innerHTML = `
+      <div class="confirm-dialog">
+        <h3>${confirmText === 'Eliminar' ? 'Confirmar eliminación' : 'Confirmar'}</h3>
+        <p>${message}</p>
+        <div class="buttons">
+          <button class="btn-cancel" id="confirm-cancel">Cancelar</button>
+          <button class="${danger ? 'btn-danger' : 'px-4 py-2 text-sm font-bold bg-fluent-accent text-slate-950 rounded-lg hover:bg-[#80d8ff]'}" id="confirm-ok">${confirmText}</button>
+        </div>
+      </div>`;
+    overlay.classList.remove('hidden');
+    overlay.querySelector('#confirm-cancel')?.addEventListener('click', () => { overlay.classList.add('hidden'); resolve(false); });
+    overlay.querySelector('#confirm-ok')?.addEventListener('click', () => { overlay.classList.add('hidden'); resolve(true); });
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) { overlay.classList.add('hidden'); resolve(false); } });
+  });
+}
+
+// --- MODAL HELPERS ---
+function setupModalBackdrop() {
+  document.querySelectorAll('.modal-overlay').forEach(el => {
+    el.addEventListener('click', (e) => {
+      if (e.target === el) {
+        const modalId = el.id;
+        closeModal(modalId);
+      }
+    });
+  });
+}
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.modal-overlay:not(.hidden)').forEach((el: any) => closeModal(el.id));
+  }
+});
+
+function openModal(id: string) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.remove('hidden');
+  const firstInput = el.querySelector('input:not([type="file"]):not([type="hidden"]), textarea, select') as HTMLElement;
+  setTimeout(() => firstInput?.focus(), 100);
+}
+
+function closeModal(id: string) {
+  const el = document.getElementById(id);
+  if (el) el.classList.add('hidden');
+  const confirmOverlay = document.getElementById('confirm-overlay');
+  if (confirmOverlay) confirmOverlay.classList.add('hidden');
+}
+
 async function mostrarApp(user: any) {
   currentUser = user;
   if (!loginScreen || !appContainer) return;
@@ -233,6 +298,40 @@ async function cargarDashboard() {
   setText('dashboard-pendientes', String(pendientes + observados));
   setText('dashboard-por-bancarizar', String(esCFO ? pendientes : pendientes));
   setText('dashboard-bancarizados', String(bancarizados));
+
+  // Populate recent table
+  const recientesBody = document.getElementById('dashboard-recientes-body');
+  const recientesTable = document.getElementById('dashboard-recientes-table');
+  const recientesEmpty = document.getElementById('dashboard-recientes-empty');
+  const recientes = solicitudes.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 10);
+  if (recientesBody && recientesTable && recientesEmpty) {
+    if (recientes.length === 0) {
+      recientesTable.classList.add('hidden');
+      recientesEmpty.classList.remove('hidden');
+    } else {
+      recientesTable.classList.remove('hidden');
+      recientesEmpty.classList.add('hidden');
+      recientesBody.innerHTML = recientes.map((s: any) => {
+        const badgeClass = s.estado === 'BANCARIZADO' ? 'bg-emerald-400/10 text-emerald-400 border-emerald-400/20' :
+          s.estado === 'OBSERVADO' ? 'bg-red-400/10 text-red-400 border-red-400/20' :
+          'bg-amber-400/10 text-amber-400 border-amber-400/20';
+        return `<tr class="hover:bg-white/5 transition-colors">
+          <td class="px-8 py-4 text-xs">${new Date(s.created_at).toLocaleDateString()}</td>
+          <td class="px-8 py-4 text-sm font-bold text-white">${(proveedorMap.get(s.proveedor_id)?.nombre_razon_social) || '-'}</td>
+          <td class="px-8 py-4 text-sm font-bold text-emerald-400">S/ ${Number(s.monto).toFixed(2)}</td>
+          <td class="px-8 py-4"><span class="px-2 py-1 rounded text-[10px] font-bold tracking-wider ${badgeClass}">${s.estado}</span></td>
+        </tr>`;
+      }).join('');
+    }
+  }
+}
+
+function skeletonRows(tbodyId: string, cols: number, rows = 5) {
+  const tbody = document.getElementById(tbodyId);
+  if (!tbody) return;
+  tbody.innerHTML = Array.from({ length: rows }, () =>
+    `<tr>${Array.from({ length: cols }, () => '<td class="px-8 py-4"><div class="skeleton h-4 w-24"></div></td>').join('')}</tr>`
+  ).join('');
 }
 
 function setText(id: string, text: string) {
@@ -242,6 +341,7 @@ function setText(id: string, text: string) {
 
 // --- MIS SOLICITUDES ---
 async function cargarMisSolicitudes() {
+  skeletonRows('table-body-mis-solicitudes', 6);
   const res = await window.electronAPI.db.listarSolicitudes('mis-solicitudes', currentUser?.rol || '');
   const tbody = document.getElementById('table-body-mis-solicitudes');
   if (!tbody) return;
@@ -252,14 +352,14 @@ async function cargarMisSolicitudes() {
   }
   tbody.innerHTML = solicitudes.map((s: any) => `
     <tr class="hover:bg-white/5 transition-colors">
-      <td class="px-6 py-4">${new Date(s.created_at).toLocaleDateString()}</td>
-      <td class="px-6 py-4 font-bold text-white">${(proveedorMap.get(s.proveedor_id)?.nombre_razon_social) || '-'}</td>
-      <td class="px-6 py-4 font-bold text-emerald-400">S/ ${Number(s.monto).toFixed(2)}</td>
-      <td class="px-6 py-4">
+      <td class="px-8 py-4">${new Date(s.created_at).toLocaleDateString()}</td>
+      <td class="px-8 py-4 font-bold text-white">${(proveedorMap.get(s.proveedor_id)?.nombre_razon_social) || '-'}</td>
+      <td class="px-8 py-4 font-bold text-emerald-400">S/ ${Number(s.monto).toFixed(2)}</td>
+      <td class="px-8 py-4">
         <span class="px-2 py-1 rounded text-[10px] font-bold tracking-wider ${s.estado === 'PENDIENTE' ? 'bg-amber-400/10 text-amber-400 border border-amber-400/20' : 'bg-red-400/10 text-red-400 border border-red-400/20'}">${s.estado}</span>
       </td>
-      <td class="px-6 py-4 text-slate-400 text-xs">${s.observacion_motivo || '-'}</td>
-      <td class="px-6 py-4 text-right space-x-2">
+      <td class="px-8 py-4 text-slate-400 text-xs">${s.observacion_motivo || '-'}</td>
+      <td class="px-8 py-4 text-right space-x-2">
         ${s.estado === 'OBSERVADO' ? `<button class="btn-editar-solicitud text-[10px] uppercase font-bold text-fluent-accent hover:underline" data-id="${s.id}">Editar</button>` : ''}
         ${s.estado !== 'BANCARIZADO' ? `<button class="btn-eliminar-solicitud text-[10px] uppercase font-bold text-red-400 hover:underline" data-id="${s.id}">Eliminar</button>` : ''}
       </td>
@@ -272,9 +372,10 @@ async function cargarMisSolicitudes() {
   tbody.querySelectorAll('.btn-eliminar-solicitud').forEach(btn => {
     btn.addEventListener('click', async () => {
       const id = btn.getAttribute('data-id');
-      if (!id || !confirm('¿Eliminar esta solicitud?')) return;
+      if (!id) return;
+      if (!await confirmDialog('¿Eliminar esta solicitud?')) return;
       const r = await window.electronAPI.db.eliminarSolicitud(id);
-      if (r.success) { await Promise.all([cargarMisSolicitudes(), cargarDashboard(), cargarBancarizados()]); } else { alert('Error: ' + r.error); }
+      if (r.success) { toast('Solicitud eliminada correctamente', 'success'); await Promise.all([cargarMisSolicitudes(), cargarDashboard(), cargarBancarizados()]); } else { toast('Error: ' + r.error, 'error'); }
     });
   });
 }
@@ -323,7 +424,7 @@ async function submitSolicitud(e: Event) {
   const progressText = document.getElementById('progress-text-solicitud');
   const btn = document.getElementById('btn-submit-solicitud') as HTMLButtonElement;
 
-  if (!proveedorId || !monto || !descripcion) { alert('Complete todos los campos.'); return; }
+  if (!proveedorId || !monto || !descripcion) { toast('Completa todos los campos obligatorios', 'error'); return; }
   errorDiv?.classList.add('hidden');
   btn.disabled = true;
   btn.textContent = 'Procesando...';
@@ -393,6 +494,7 @@ async function submitSolicitud(e: Event) {
 // --- BANDEJA CFO ---
 async function cargarBandejaCFO() {
   if (currentUser?.rol !== 'CFO') return;
+  skeletonRows('table-body-cfo-bandeja', 6);
   const res = await window.electronAPI.db.listarSolicitudes('cfo-bandeja', 'CFO');
   const tbody = document.getElementById('table-body-cfo-bandeja');
   const solicitudes = res.success && Array.isArray(res.solicitudes) ? res.solicitudes : [];
@@ -403,18 +505,18 @@ async function cargarBandejaCFO() {
   }
   tbody.innerHTML = solicitudes.map((s: any) => `
     <tr class="hover:bg-white/5 transition-colors">
-      <td class="px-6 py-4">${new Date(s.created_at).toLocaleDateString()}</td>
-      <td class="px-6 py-4 font-bold text-white">${(perfilMap.get(s.usuario_id)?.nombre) || 'N/A'} ${(perfilMap.get(s.usuario_id)?.apellido) || ''}</td>
-      <td class="px-6 py-4">${(proveedorMap.get(s.proveedor_id)?.nombre_razon_social) || '-'}</td>
-      <td class="px-6 py-4 font-bold text-emerald-400">S/ ${Number(s.monto).toFixed(2)}</td>
-      <td class="px-6 py-4">
+      <td class="px-8 py-4">${new Date(s.created_at).toLocaleDateString()}</td>
+      <td class="px-8 py-4 font-bold text-white">${(perfilMap.get(s.usuario_id)?.nombre) || 'N/A'} ${(perfilMap.get(s.usuario_id)?.apellido) || ''}</td>
+      <td class="px-8 py-4">${(proveedorMap.get(s.proveedor_id)?.nombre_razon_social) || '-'}</td>
+      <td class="px-8 py-4 font-bold text-emerald-400">S/ ${Number(s.monto).toFixed(2)}</td>
+      <td class="px-8 py-4">
         <span class="px-2 py-1 rounded text-[10px] font-bold tracking-wider ${s.estado === 'PENDIENTE' ? 'bg-amber-400/10 text-amber-400 border border-amber-400/20' : 'bg-red-400/10 text-red-400 border border-red-400/20'}">${s.estado}</span>
         ${s.observacion_motivo ? `<div class="text-[10px] text-slate-400 mt-1">${s.observacion_motivo}</div>` : ''}
       </td>
-      <td class="px-6 py-4">
+      <td class="px-8 py-4">
         ${renderArchivos(s.archivos)}
       </td>
-      <td class="px-6 py-4 text-right space-x-2">
+      <td class="px-8 py-4 text-right space-x-2">
         <button class="btn-bancarizar text-[10px] uppercase font-bold bg-emerald-500/20 text-emerald-400 px-3 py-1.5 rounded-lg hover:bg-emerald-500/30" data-id="${s.id}">Bancarizar</button>
         <button class="btn-observar text-[10px] uppercase font-bold bg-red-500/20 text-red-400 px-3 py-1.5 rounded-lg hover:bg-red-500/30" data-id="${s.id}">Rebotar</button>
       </td>
@@ -456,7 +558,7 @@ async function submitObservar(e: Event) {
     closeModal('modal-observar');
     await Promise.all([cargarBandejaCFO(), cargarDashboard()]);
   } else {
-    alert('Error: ' + res.error);
+    toast('Error al rebotar: ' + res.error, 'error');
   }
   btn.disabled = false; btn.textContent = 'Rebotar';
 }
@@ -483,7 +585,7 @@ async function submitBancarizar(e: Event) {
   const btn = (e.target as HTMLFormElement).querySelector('button[type="submit"]') as HTMLButtonElement;
 
   if (!bancarizarSolicitudId) return;
-  if (bancarizarFiles.length === 0) { alert('Adjunte al menos una evidencia.'); return; }
+  if (bancarizarFiles.length === 0) { toast('Adjunta al menos una evidencia', 'error'); return; }
 
   errorDiv?.classList.add('hidden');
   btn.disabled = true; btn.textContent = 'Procesando...';
@@ -532,6 +634,7 @@ async function submitBancarizar(e: Event) {
 // --- BANCARIZADOS ---
 async function cargarBancarizados() {
   const rol = currentUser?.rol || '';
+  skeletonRows('table-body-bancarizados', 7);
   const res = await window.electronAPI.db.listarSolicitudes('bancarizados', rol);
   const tbody = document.getElementById('table-body-bancarizados');
   const solicitudes = res.success && Array.isArray(res.solicitudes) ? res.solicitudes : [];
@@ -543,22 +646,23 @@ async function cargarBancarizados() {
   }
   tbody.innerHTML = solicitudes.map((s: any) => `
     <tr class="hover:bg-white/5 transition-colors">
-      <td class="px-6 py-4">${new Date(s.updated_at).toLocaleDateString()}</td>
-      <td class="px-6 py-4 font-bold text-white">${(perfilMap.get(s.usuario_id)?.nombre) || 'N/A'} ${(perfilMap.get(s.usuario_id)?.apellido) || ''}</td>
-      <td class="px-6 py-4">${(proveedorMap.get(s.proveedor_id)?.nombre_razon_social) || '-'}</td>
-      <td class="px-6 py-4 font-bold text-emerald-400">S/ ${Number(s.monto).toFixed(2)}</td>
-      <td class="px-6 py-4">${renderArchivos(s.archivos)}</td>
-      <td class="px-6 py-4 text-right">${renderArchivos(s.evidencias_bancarizacion)}</td>
-      <td class="px-6 py-4 text-right">${esCFO ? `<button class="btn-eliminar-bancarizado text-[10px] uppercase font-bold text-red-400 hover:underline" data-id="${s.id}">Eliminar</button>` : '-'}</td>
+      <td class="px-8 py-4">${new Date(s.updated_at).toLocaleDateString()}</td>
+      <td class="px-8 py-4 font-bold text-white">${(perfilMap.get(s.usuario_id)?.nombre) || 'N/A'} ${(perfilMap.get(s.usuario_id)?.apellido) || ''}</td>
+      <td class="px-8 py-4">${(proveedorMap.get(s.proveedor_id)?.nombre_razon_social) || '-'}</td>
+      <td class="px-8 py-4 font-bold text-emerald-400">S/ ${Number(s.monto).toFixed(2)}</td>
+      <td class="px-8 py-4">${renderArchivos(s.archivos)}</td>
+      <td class="px-8 py-4 text-right">${renderArchivos(s.evidencias_bancarizacion)}</td>
+      <td class="px-8 py-4 text-right">${esCFO ? `<button class="btn-eliminar-bancarizado text-[10px] uppercase font-bold text-red-400 hover:underline" data-id="${s.id}">Eliminar</button>` : '-'}</td>
     </tr>
   `).join('');
 
   tbody.querySelectorAll('.btn-eliminar-bancarizado').forEach(btn => {
     btn.addEventListener('click', async () => {
       const id = btn.getAttribute('data-id');
-      if (!id || !confirm('¿Eliminar esta solicitud bancarizada? Se moverá a eliminados.')) return;
+      if (!id) return;
+      if (!await confirmDialog('¿Eliminar esta solicitud bancarizada? Se moverá a eliminados.')) return;
       const r = await window.electronAPI.db.eliminarSolicitud(id);
-      if (r.success) { await Promise.all([cargarBancarizados(), cargarDashboard()]); } else { alert('Error: ' + r.error); }
+      if (r.success) { toast('Solicitud eliminada', 'success'); await Promise.all([cargarBancarizados(), cargarDashboard()]); } else { toast('Error: ' + r.error, 'error'); }
     });
   });
 }
@@ -588,6 +692,7 @@ async function cargarProveedoresSelect(res?: any) {
 }
 
 async function cargarProveedores() {
+  skeletonRows('table-body-proveedores', 6);
   const [res, bancoMap, sedeMap, perfilesRes] = await Promise.all([
     window.electronAPI.db.listarProveedores(),
     getBancoMap(),
@@ -608,13 +713,13 @@ async function cargarProveedores() {
       const banco = bancoMap.get(p.banco_id);
       const sede = sedeMap.get(p.sede_id);
       return `<tr class="hover:bg-white/5 transition-colors">
-        <td class="px-6 py-4 font-bold text-white">${p.nombre_razon_social}</td>
-        <td class="px-6 py-4 text-slate-400">${p.correo || '-'}</td>
-        <td class="px-6 py-4">${banco ? `${banco.nombre} — ${banco.moneda}` : '-'}</td>
-        <td class="px-6 py-4">${p.numero_cuenta || '-'}</td>
-        <td class="px-6 py-4">${sede ? sede.nombre : '-'}</td>
-        <td class="px-6 py-4">${p.cci || '-'}</td>
-        <td class="px-6 py-4 text-right space-x-2">
+        <td class="px-8 py-4 font-bold text-white">${p.nombre_razon_social}</td>
+        <td class="px-8 py-4 text-slate-400">${p.correo || '-'}</td>
+        <td class="px-8 py-4">${banco ? `${banco.nombre} — ${banco.moneda}` : '-'}</td>
+        <td class="px-8 py-4">${p.numero_cuenta || '-'}</td>
+        <td class="px-8 py-4">${sede ? sede.nombre : '-'}</td>
+        <td class="px-8 py-4">${p.cci || '-'}</td>
+        <td class="px-8 py-4 text-right space-x-2">
           <button class="btn-editar-proveedor text-[10px] uppercase font-bold text-fluent-accent hover:underline" data-id="${p.id}">Editar</button>
           <button class="btn-eliminar-proveedor text-[10px] uppercase font-bold text-red-400 hover:underline" data-id="${p.id}">Eliminar</button>
         </td>
@@ -638,9 +743,10 @@ async function cargarProveedores() {
     tbody.querySelectorAll('.btn-eliminar-proveedor').forEach(btn => {
       btn.addEventListener('click', async () => {
         const id = btn.getAttribute('data-id');
-        if (!id || !confirm('¿Eliminar este proveedor?')) return;
+        if (!id) return;
+        if (!await confirmDialog('¿Eliminar este proveedor?')) return;
         const r = await window.electronAPI.db.eliminarProveedor(id);
-        if (r.success) { await cargarProveedores(); } else { alert('Error: ' + r.error); }
+        if (r.success) { toast('Proveedor eliminado', 'success'); await cargarProveedores(); } else { toast('Error: ' + r.error, 'error'); }
       });
     });
   }
@@ -648,6 +754,7 @@ async function cargarProveedores() {
 
 // --- BANCOS ---
 async function cargarBancos() {
+  skeletonRows('table-body-bancos', 3);
   const res = await window.electronAPI.db.listarBancos();
   const selects = ['prov-banco-id'];
   selects.forEach(id => {
@@ -661,9 +768,9 @@ async function cargarBancos() {
   if (tbody && res.success) {
     tbody.innerHTML = (res.bancos || []).map((b: any) =>
       `<tr class="hover:bg-white/5 transition-colors">
-        <td class="px-6 py-4 font-bold text-white">${b.nombre}</td>
-        <td class="px-6 py-4">${b.moneda || 'Soles'}</td>
-        <td class="px-6 py-4 text-right space-x-2">
+        <td class="px-8 py-4 font-bold text-white">${b.nombre}</td>
+        <td class="px-8 py-4">${b.moneda || 'Soles'}</td>
+        <td class="px-8 py-4 text-right space-x-2">
           <button class="btn-editar-banco text-[10px] uppercase font-bold text-fluent-accent hover:underline" data-id="${b.id}" data-nombre="${b.nombre}" data-moneda="${b.moneda || 'Soles'}">Editar</button>
           <button class="btn-eliminar-banco text-[10px] uppercase font-bold text-red-400 hover:underline" data-id="${b.id}">Eliminar</button>
         </td>
@@ -683,9 +790,10 @@ async function cargarBancos() {
     tbody.querySelectorAll('.btn-eliminar-banco').forEach(btn => {
       btn.addEventListener('click', async () => {
         const id = btn.getAttribute('data-id');
-        if (!id || !confirm('¿Eliminar este banco?')) return;
+        if (!id) return;
+        if (!await confirmDialog('¿Eliminar este banco?')) return;
         const res = await window.electronAPI.db.eliminarBanco(id);
-        if (res.success) { await cargarBancos(); } else { alert('Error: ' + res.error); }
+        if (res.success) { toast('Banco eliminado', 'success'); await cargarBancos(); } else { toast('Error: ' + res.error, 'error'); }
       });
     });
   }
@@ -693,6 +801,7 @@ async function cargarBancos() {
 
 // --- SEDES ---
 async function cargarSedes() {
+  skeletonRows('table-body-sedes', 2);
   const res = await window.electronAPI.db.listarSedes();
   const selects = ['prov-sede-id'];
   selects.forEach(id => {
@@ -706,8 +815,8 @@ async function cargarSedes() {
   if (tbody && res.success) {
     tbody.innerHTML = (res.sedes || []).map((s: any) =>
       `<tr class="hover:bg-white/5 transition-colors">
-        <td class="px-6 py-4 font-bold text-white">${s.nombre}</td>
-        <td class="px-6 py-4 text-right space-x-2">
+        <td class="px-8 py-4 font-bold text-white">${s.nombre}</td>
+        <td class="px-8 py-4 text-right space-x-2">
           <button class="btn-editar-sede text-[10px] uppercase font-bold text-fluent-accent hover:underline" data-id="${s.id}" data-nombre="${s.nombre}">Editar</button>
           <button class="btn-eliminar-sede text-[10px] uppercase font-bold text-red-400 hover:underline" data-id="${s.id}">Eliminar</button>
         </td>
@@ -725,9 +834,10 @@ async function cargarSedes() {
     tbody.querySelectorAll('.btn-eliminar-sede').forEach(btn => {
       btn.addEventListener('click', async () => {
         const id = btn.getAttribute('data-id');
-        if (!id || !confirm('¿Eliminar esta sede?')) return;
+        if (!id) return;
+        if (!await confirmDialog('¿Eliminar esta sede?')) return;
         const res = await window.electronAPI.db.eliminarSede(id);
-        if (res.success) { await cargarSedes(); } else { alert('Error: ' + res.error); }
+        if (res.success) { toast('Sede eliminada', 'success'); await cargarSedes(); } else { toast('Error: ' + res.error, 'error'); }
       });
     });
   }
@@ -735,16 +845,17 @@ async function cargarSedes() {
 
 // --- USUARIOS ---
 async function cargarUsuarios() {
+  skeletonRows('table-body-usuarios', 5);
   const res = await window.electronAPI.auth.listarUsuarios();
   const tbody = document.getElementById('table-body-usuarios');
   if (tbody && res.success) {
     tbody.innerHTML = (res.usuarios || []).map((u: any) => `
       <tr class="hover:bg-white/5 transition-colors">
-        <td class="px-6 py-4 font-bold text-white">${u.nombre} ${u.apellido}</td>
-        <td class="px-6 py-4 text-slate-400">${u.email}</td>
-        <td class="px-6 py-4"><span class="px-2 py-1 bg-white/10 rounded text-[10px] font-bold tracking-wider">${u.rol}</span></td>
-        <td class="px-6 py-4">${new Date(u.created_at).toLocaleDateString()}</td>
-        <td class="px-6 py-4 text-right space-x-2">
+        <td class="px-8 py-4 font-bold text-white">${u.nombre} ${u.apellido}</td>
+        <td class="px-8 py-4 text-slate-400">${u.email}</td>
+        <td class="px-8 py-4"><span class="px-2 py-1 bg-white/10 rounded text-[10px] font-bold tracking-wider">${u.rol}</span></td>
+        <td class="px-8 py-4">${new Date(u.created_at).toLocaleDateString()}</td>
+        <td class="px-8 py-4 text-right space-x-2">
           <button class="btn-editar-usuario text-[10px] uppercase font-bold text-fluent-accent hover:underline" data-id="${u.id}" data-nombre="${u.nombre}" data-apellido="${u.apellido}" data-rol="${u.rol}">Editar</button>
           <button class="btn-eliminar-usuario text-[10px] uppercase font-bold text-red-400 hover:underline" data-id="${u.id}">Eliminar</button>
         </td>
@@ -770,9 +881,10 @@ async function cargarUsuarios() {
     tbody.querySelectorAll('.btn-eliminar-usuario').forEach(btn => {
       btn.addEventListener('click', async () => {
         const id = btn.getAttribute('data-id');
-        if (!id || !confirm('¿Eliminar este usuario? Esta acción no se puede deshacer.')) return;
+        if (!id) return;
+        if (!await confirmDialog('¿Eliminar este usuario? Esta acción no se puede deshacer.', 'Eliminar', true)) return;
         const r = await window.electronAPI.auth.eliminarUsuario(id);
-        if (r.success) { await cargarUsuarios(); } else { alert('Error: ' + r.error); }
+        if (r.success) { toast('Usuario eliminado', 'success'); await cargarUsuarios(); } else { toast('Error: ' + r.error, 'error'); }
       });
     });
   }
@@ -831,17 +943,6 @@ function renderFileList(listId: string, files: File[], fileArray: { files: File[
       renderFileList(listId, fileArray.files, fileArray);
     });
   });
-}
-
-// --- MODAL HELPERS ---
-function openModal(id: string) {
-  const el = document.getElementById(id);
-  if (el) el.classList.remove('hidden');
-}
-
-function closeModal(id: string) {
-  const el = document.getElementById(id);
-  if (el) el.classList.add('hidden');
 }
 
 function resetAllForms() {
@@ -965,7 +1066,7 @@ function setupEventListeners() {
 
   // Logout
   logoutBtn?.addEventListener('click', async () => {
-    if (confirm('¿Cerrar sesión en BancaFlow?')) {
+    if (await confirmDialog('¿Cerrar sesión en BancaFlow?', 'Cerrar sesión', false)) {
       await window.electronAPI.auth.logout();
       window.location.reload();
     }
@@ -1019,8 +1120,8 @@ function setupEventListeners() {
         form.reset();
         form.removeAttribute('data-editing');
         await cargarProveedores();
-      } else { alert('Error: ' + res.error); }
-    } catch (err: any) { alert('Error: ' + err.message); }
+      } else { toast('Error: ' + res.error, 'error'); }
+    } catch (err: any) { toast('Error: ' + err.message, 'error'); }
     finally { btn.disabled = false; btn.textContent = 'Guardar'; }
   });
   document.getElementById('btn-add-proveedor')?.addEventListener('click', () => openModal('modal-proveedor'));
@@ -1042,7 +1143,7 @@ function setupEventListeners() {
       form.reset();
       form.removeAttribute('data-editing');
       await Promise.all([cargarBancos(), cargarProveedores()]);
-    } else { alert('Error: ' + res.error); }
+    } else { toast('Error: ' + res.error, 'error'); }
   });
   document.getElementById('btn-add-banco')?.addEventListener('click', () => openModal('modal-banco'));
   document.getElementById('btn-cancel-banco')?.addEventListener('click', () => closeModal('modal-banco'));
@@ -1062,7 +1163,7 @@ function setupEventListeners() {
       form.reset();
       form.removeAttribute('data-editing');
       await Promise.all([cargarSedes(), cargarProveedores()]);
-    } else { alert('Error: ' + res.error); }
+    } else { toast('Error: ' + res.error, 'error'); }
   });
   document.getElementById('btn-add-sede')?.addEventListener('click', () => openModal('modal-sede'));
   document.getElementById('btn-cancel-sede')?.addEventListener('click', () => closeModal('modal-sede'));
@@ -1092,8 +1193,8 @@ function setupEventListeners() {
         (document.getElementById('usr-correo') as HTMLInputElement).disabled = false;
         (document.getElementById('usr-contrasena') as HTMLInputElement).disabled = false;
         await cargarUsuarios();
-      } else { alert('Error: ' + res.error); }
-    } catch (err: any) { alert('Error: ' + err.message); }
+      } else { toast('Error: ' + res.error, 'error'); }
+    } catch (err: any) { toast('Error: ' + err.message, 'error'); }
     finally { btn.disabled = false; btn.textContent = 'Guardar'; }
   });
   document.getElementById('btn-add-usuario')?.addEventListener('click', () => openModal('modal-usuario'));
