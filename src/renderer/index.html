@@ -188,17 +188,14 @@
             <!-- VISTA: MIS SOLICITUDES -->
             <section id="view-mis-solicitudes"
                 class="flex-1 flex flex-col overflow-hidden hidden animate-in fade-in duration-500 mica-section">
-                <div class="flex items-center justify-between px-8 py-3 border-b border-fluent-border bg-black/10 backdrop-blur-xl shrink-0">
-                    <h2 class="text-xs font-bold uppercase tracking-widest text-slate-400">Solicitudes Pendientes y Observadas</h2>
+                <div class="flex items-center gap-3 px-8 py-3 border-b border-fluent-border bg-black/10 backdrop-blur-xl shrink-0">
+                    <input type="text" id="search-mis-solicitudes" placeholder="Buscar solicitudes..." class="fluent-input text-xs flex-1 min-w-0">
                     <button id="btn-nueva-solicitud"
-                        class="text-xs font-bold uppercase tracking-wider bg-fluent-accent text-slate-950 px-4 py-2 rounded-lg hover:bg-[#80d8ff] transition-colors shrink-0">Nueva Solicitud</button>
-                </div>
-                <div class="px-8 py-2 border-b border-fluent-border bg-black/5 shrink-0">
-                    <input type="text" id="search-mis-solicitudes" placeholder="Buscar..." class="fluent-input text-xs">
+                        class="text-xs font-bold uppercase tracking-wider bg-fluent-accent text-slate-950 px-4 py-2 rounded-lg hover:bg-[#80d8ff] transition-colors shrink-0 whitespace-nowrap">Nueva Solicitud</button>
                 </div>
                 <div class="flex-1 overflow-auto">
                     <table class="w-full text-left text-sm text-slate-300 table-alternate">
-                        <thead class="text-xs uppercase bg-black/20 text-slate-400 font-bold tracking-wider sticky top-0 backdrop-blur-md">
+                        <thead class="text-xs uppercase bg-neutral-950 text-slate-400 font-bold tracking-wider sticky top-0 z-10">
                             <tr>
                                 <th class="px-8 py-4">Fecha</th>
                                 <th class="px-8 py-4">Proveedor</th>
@@ -216,15 +213,12 @@
             <!-- VISTA: BANDEJA CFO -->
             <section id="view-cfo-bandeja"
                 class="flex-1 flex flex-col overflow-hidden hidden animate-in fade-in duration-500 mica-section">
-                <div class="flex items-center justify-between px-8 py-3 border-b border-fluent-border bg-black/10 backdrop-blur-xl shrink-0">
-                    <h3 class="text-xs font-bold uppercase tracking-widest text-slate-400"><i data-lucide="bell" class="w-4 h-4 mr-2 inline-block text-fluent-accent"></i> Bandeja de Solicitudes</h3>
-                </div>
-                <div class="px-8 py-2 border-b border-fluent-border bg-black/5 shrink-0">
-                    <input type="text" id="search-cfo-bandeja" placeholder="Buscar..." class="fluent-input text-xs">
+                <div class="flex items-center gap-3 px-8 py-3 border-b border-fluent-border bg-black/10 backdrop-blur-xl shrink-0">
+                    <input type="text" id="search-cfo-bandeja" placeholder="Buscar solicitudes..." class="fluent-input text-xs flex-1 min-w-0">
                 </div>
                 <div class="flex-1 overflow-auto">
                     <table class="w-full text-left text-sm text-slate-300 table-alternate">
-                        <thead class="text-xs uppercase bg-black/20 text-slate-400 font-bold tracking-wider sticky top-0 backdrop-blur-md">
+                        <thead class="text-xs uppercase bg-neutral-950 text-slate-400 font-bold tracking-wider sticky top-0 z-10">
                             <tr>
                                 <th class="px-8 py-4">Fecha</th>
                                 <th class="px-8 py-4">Solicitante</th>
@@ -243,15 +237,12 @@
             <!-- VISTA: BANCARIZADOS -->
             <section id="view-bancarizados"
                 class="flex-1 flex flex-col overflow-hidden hidden animate-in fade-in duration-500 mica-section">
-                <div class="flex items-center justify-between px-8 py-3 border-b border-fluent-border bg-black/10 backdrop-blur-xl shrink-0">
-                    <h3 class="text-xs font-bold uppercase tracking-widest text-slate-400"><i data-lucide="history" class="w-4 h-4 mr-2 inline-block text-fluent-accent"></i> Solicitudes Bancarizadas</h3>
-                </div>
-                <div class="px-8 py-2 border-b border-fluent-border bg-black/5 shrink-0">
-                    <input type="text" id="search-bancarizados" placeholder="Buscar..." class="fluent-input text-xs">
+                <div class="flex items-center gap-3 px-8 py-3 border-b border-fluent-border bg-black/10 backdrop-blur-xl shrink-0">
+                    <input type="text" id="search-bancarizados" placeholder="Buscar..." class="fluent-input text-xs flex-1 min-w-0">
                 </div>
                 <div class="flex-1 overflow-auto">
                     <table class="w-full text-left text-sm text-slate-300 table-alternate">
-                        <thead class="text-xs uppercase bg-black/20 text-slate-400 font-bold tracking-wider sticky top-0 backdrop-blur-md">
+                        <thead class="text-xs uppercase bg-neutral-950 text-slate-400 font-bold tracking-wider sticky top-0 z-10">
                             <tr>
                                 <th class="px-8 py-4">Fecha</th>
                                 <th class="px-8 py-4">Solicitante</th>
@@ -270,17 +261,14 @@
             <!-- VISTA: PROVEEDORES -->
             <section id="view-proveedores"
                 class="flex-1 flex flex-col overflow-hidden hidden animate-in fade-in duration-500 mica-section">
-                <div class="flex items-center justify-between px-8 py-3 border-b border-fluent-border bg-black/10 backdrop-blur-xl shrink-0">
-                    <h3 class="text-xs font-bold uppercase tracking-widest text-slate-400"><i data-lucide="users" class="w-4 h-4 mr-2 inline-block text-fluent-accent"></i> Proveedores</h3>
+                <div class="flex items-center gap-3 px-8 py-3 border-b border-fluent-border bg-black/10 backdrop-blur-xl shrink-0">
+                    <input type="text" id="search-proveedores" placeholder="Buscar proveedores..." class="fluent-input text-xs flex-1 min-w-0">
                     <button id="btn-add-proveedor"
-                        class="text-xs font-bold uppercase tracking-wider bg-fluent-accent text-slate-950 px-4 py-2 rounded-lg hover:bg-[#80d8ff] transition-colors shrink-0">Añadir</button>
-                </div>
-                <div class="px-8 py-2 border-b border-fluent-border bg-black/5 shrink-0">
-                    <input type="text" id="search-proveedores" placeholder="Buscar..." class="fluent-input text-xs">
+                        class="text-xs font-bold uppercase tracking-wider bg-fluent-accent text-slate-950 px-4 py-2 rounded-lg hover:bg-[#80d8ff] transition-colors shrink-0 whitespace-nowrap">Añadir</button>
                 </div>
                 <div class="flex-1 overflow-auto">
                     <table class="w-full text-left text-sm text-slate-300 table-alternate">
-                        <thead class="text-xs uppercase bg-black/20 text-slate-400 font-bold tracking-wider sticky top-0 backdrop-blur-md">
+                        <thead class="text-xs uppercase bg-neutral-950 text-slate-400 font-bold tracking-wider sticky top-0 z-10">
                             <tr>
                                 <th class="px-8 py-4">Razón Social</th>
                                 <th class="px-8 py-4">Correo</th>
@@ -299,17 +287,14 @@
             <!-- VISTA: BANCOS -->
             <section id="view-bancos"
                 class="flex-1 flex flex-col overflow-hidden hidden animate-in fade-in duration-500 mica-section">
-                <div class="flex items-center justify-between px-8 py-3 border-b border-fluent-border bg-black/10 backdrop-blur-xl shrink-0">
-                    <h3 class="text-xs font-bold uppercase tracking-widest text-slate-400"><i data-lucide="landmark" class="w-4 h-4 mr-2 inline-block text-fluent-accent"></i> Bancos</h3>
+                <div class="flex items-center gap-3 px-8 py-3 border-b border-fluent-border bg-black/10 backdrop-blur-xl shrink-0">
+                    <input type="text" id="search-bancos" placeholder="Buscar bancos..." class="fluent-input text-xs flex-1 min-w-0">
                     <button id="btn-add-banco"
-                        class="text-xs font-bold uppercase tracking-wider bg-fluent-accent text-slate-950 px-4 py-2 rounded-lg hover:bg-[#80d8ff] transition-colors shrink-0">Añadir</button>
-                </div>
-                <div class="px-8 py-2 border-b border-fluent-border bg-black/5 shrink-0">
-                    <input type="text" id="search-bancos" placeholder="Buscar..." class="fluent-input text-xs">
+                        class="text-xs font-bold uppercase tracking-wider bg-fluent-accent text-slate-950 px-4 py-2 rounded-lg hover:bg-[#80d8ff] transition-colors shrink-0 whitespace-nowrap">Añadir</button>
                 </div>
                 <div class="flex-1 overflow-auto">
                     <table class="w-full text-left text-sm text-slate-300 table-alternate">
-                        <thead class="text-xs uppercase bg-black/20 text-slate-400 font-bold tracking-wider sticky top-0 backdrop-blur-md">
+                        <thead class="text-xs uppercase bg-neutral-950 text-slate-400 font-bold tracking-wider sticky top-0 z-10">
                             <tr><th class="px-8 py-4">Nombre</th><th class="px-8 py-4">Moneda</th><th class="px-8 py-4 text-right">Acción</th></tr>
                         </thead>
                         <tbody id="table-body-bancos" class="divide-y divide-white/5"></tbody>
@@ -320,17 +305,14 @@
             <!-- VISTA: SEDES -->
             <section id="view-sedes"
                 class="flex-1 flex flex-col overflow-hidden hidden animate-in fade-in duration-500 mica-section">
-                <div class="flex items-center justify-between px-8 py-3 border-b border-fluent-border bg-black/10 backdrop-blur-xl shrink-0">
-                    <h3 class="text-xs font-bold uppercase tracking-widest text-slate-400"><i data-lucide="building" class="w-4 h-4 mr-2 inline-block text-fluent-accent"></i> Sedes</h3>
+                <div class="flex items-center gap-3 px-8 py-3 border-b border-fluent-border bg-black/10 backdrop-blur-xl shrink-0">
+                    <input type="text" id="search-sedes" placeholder="Buscar sedes..." class="fluent-input text-xs flex-1 min-w-0">
                     <button id="btn-add-sede"
-                        class="text-xs font-bold uppercase tracking-wider bg-fluent-accent text-slate-950 px-4 py-2 rounded-lg hover:bg-[#80d8ff] transition-colors shrink-0">Añadir</button>
-                </div>
-                <div class="px-8 py-2 border-b border-fluent-border bg-black/5 shrink-0">
-                    <input type="text" id="search-sedes" placeholder="Buscar..." class="fluent-input text-xs">
+                        class="text-xs font-bold uppercase tracking-wider bg-fluent-accent text-slate-950 px-4 py-2 rounded-lg hover:bg-[#80d8ff] transition-colors shrink-0 whitespace-nowrap">Añadir</button>
                 </div>
                 <div class="flex-1 overflow-auto">
                     <table class="w-full text-left text-sm text-slate-300 table-alternate">
-                        <thead class="text-xs uppercase bg-black/20 text-slate-400 font-bold tracking-wider sticky top-0 backdrop-blur-md">
+                        <thead class="text-xs uppercase bg-neutral-950 text-slate-400 font-bold tracking-wider sticky top-0 z-10">
                             <tr><th class="px-8 py-4">Nombre</th><th class="px-8 py-4 text-right">Acción</th></tr>
                         </thead>
                         <tbody id="table-body-sedes" class="divide-y divide-white/5"></tbody>
@@ -341,17 +323,14 @@
             <!-- VISTA: USUARIOS -->
             <section id="view-usuarios"
                 class="flex-1 flex flex-col overflow-hidden hidden animate-in fade-in duration-500 mica-section">
-                <div class="flex items-center justify-between px-8 py-3 border-b border-fluent-border bg-black/10 backdrop-blur-xl shrink-0">
-                    <h3 class="text-xs font-bold uppercase tracking-widest text-slate-400"><i data-lucide="shield" class="w-4 h-4 mr-2 inline-block text-fluent-accent"></i> Usuarios</h3>
+                <div class="flex items-center gap-3 px-8 py-3 border-b border-fluent-border bg-black/10 backdrop-blur-xl shrink-0">
+                    <input type="text" id="search-usuarios" placeholder="Buscar usuarios..." class="fluent-input text-xs flex-1 min-w-0">
                     <button id="btn-add-usuario"
-                        class="text-xs font-bold uppercase tracking-wider bg-fluent-accent text-slate-950 px-4 py-2 rounded-lg hover:bg-[#80d8ff] transition-colors shrink-0">Nuevo</button>
-                </div>
-                <div class="px-8 py-2 border-b border-fluent-border bg-black/5 shrink-0">
-                    <input type="text" id="search-usuarios" placeholder="Buscar..." class="fluent-input text-xs">
+                        class="text-xs font-bold uppercase tracking-wider bg-fluent-accent text-slate-950 px-4 py-2 rounded-lg hover:bg-[#80d8ff] transition-colors shrink-0 whitespace-nowrap">Nuevo</button>
                 </div>
                 <div class="flex-1 overflow-auto">
                     <table class="w-full text-left text-sm text-slate-300 table-alternate">
-                        <thead class="text-xs uppercase bg-black/20 text-slate-400 font-bold tracking-wider sticky top-0 backdrop-blur-md">
+                        <thead class="text-xs uppercase bg-neutral-950 text-slate-400 font-bold tracking-wider sticky top-0 z-10">
                             <tr>
                                 <th class="px-8 py-4">Nombre</th>
                                 <th class="px-8 py-4">Correo</th>
