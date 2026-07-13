@@ -111,7 +111,7 @@
         <main class="flex-1 flex flex-col overflow-hidden bg-transparent">
             <!-- Header -->
             <header
-                class="h-14 min-h-[56px] flex items-center justify-between pl-8 pr-6 border-b border-fluent-border bg-black/10 backdrop-blur-xl drag-region">
+                class="h-14 min-h-[56px] flex items-center justify-between pl-8 pr-[150px] border-b border-fluent-border bg-black/10 backdrop-blur-xl drag-region">
                 <h2 id="current-view-title"
                     class="text-xs font-bold uppercase tracking-widest text-slate-200 no-drag">Dashboard General</h2>
                 <div class="flex items-center space-x-4 no-drag">
@@ -649,6 +649,70 @@
                     <button type="submit" class="px-4 py-2 text-sm font-bold bg-emerald-500 text-white rounded-lg hover:bg-emerald-400 transition-colors">Confirmar Bancarización</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- MODAL: DETALLE DE SOLICITUD -->
+    <div id="modal-detalle"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm hidden modal-overlay">
+        <div class="fluent-card w-full max-w-2xl p-6 max-h-[85vh] overflow-y-auto modal-content">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="fluent-title mb-0">Detalle de Solicitud</h3>
+                <button type="button" id="btn-cerrar-detalle" class="p-1 rounded-lg hover:bg-white/10 transition-colors text-slate-400 hover:text-white">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div id="detalle-contenido" class="space-y-5">
+                <div class="grid grid-cols-2 gap-5">
+                    <div class="space-y-1">
+                        <label class="fluent-label text-[10px]">FECHA DE CREACIÓN</label>
+                        <p id="detalle-fecha" class="text-sm font-bold text-white">—</p>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="fluent-label text-[10px]">ESTADO</label>
+                        <p id="detalle-estado" class="text-sm font-bold">—</p>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-5">
+                    <div class="space-y-1">
+                        <label class="fluent-label text-[10px]">SOLICITANTE</label>
+                        <p id="detalle-solicitante" class="text-sm font-bold text-white">—</p>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="fluent-label text-[10px]">PROVEEDOR</label>
+                        <p id="detalle-proveedor" class="text-sm font-bold text-white">—</p>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-5">
+                    <div class="space-y-1">
+                        <label class="fluent-label text-[10px]">MONTO</label>
+                        <p id="detalle-monto" class="text-lg font-extrabold text-emerald-400">—</p>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="fluent-label text-[10px]">MONEDA</label>
+                        <p id="detalle-moneda" class="text-sm font-bold text-white">Soles</p>
+                    </div>
+                </div>
+                <div class="space-y-1">
+                    <label class="fluent-label text-[10px]">DESCRIPCIÓN</label>
+                    <p id="detalle-descripcion" class="text-sm text-slate-300 bg-white/5 p-3 rounded-lg leading-relaxed">—</p>
+                </div>
+                <div id="detalle-motivo-wrapper" class="hidden space-y-1">
+                    <label class="fluent-label text-[10px]">MOTIVO DE OBSERVACIÓN</label>
+                    <p id="detalle-motivo" class="text-sm text-red-400 bg-red-500/10 p-3 rounded-lg leading-relaxed">—</p>
+                </div>
+                <div class="space-y-1">
+                    <label class="fluent-label text-[10px]">SUSTENTOS</label>
+                    <div id="detalle-sustentos" class="text-sm text-slate-400">—</div>
+                </div>
+                <div id="detalle-evidencias-wrapper" class="hidden space-y-1">
+                    <label class="fluent-label text-[10px]">EVIDENCIAS DE BANCARIZACIÓN</label>
+                    <div id="detalle-evidencias" class="text-sm text-slate-400">—</div>
+                </div>
+                <div class="pt-3 border-t border-white/10 flex justify-end">
+                    <button type="button" id="btn-cerrar-detalle-bottom" class="px-4 py-2 text-sm font-bold bg-fluent-accent text-slate-950 rounded-lg hover:bg-[#80d8ff] transition-colors">Cerrar</button>
+                </div>
+            </div>
         </div>
     </div>
 

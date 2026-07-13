@@ -1,5 +1,5 @@
 declare const lucide: any;
-const { createIcons, LayoutDashboard, FilePlus, History: HistoryIcon, Bell, Settings, LogOut, Inbox, Users, Shield, Landmark, Building, CircleCheck, Pencil, Trash2, XCircle, Banknote } = lucide;
+const { createIcons, LayoutDashboard, FilePlus, History: HistoryIcon, Bell, Settings, LogOut, Inbox, Users, Shield, Landmark, Building, CircleCheck, Pencil, Trash2, XCircle, Banknote, Eye } = lucide;
 
 interface ArchivoSubido {
   name: string;
@@ -34,6 +34,7 @@ interface IElectronAPI {
     bancarizarSolicitud: (id: string, evidencias: any[]) => Promise<{ success: boolean; solicitud?: any; error?: string }>;
     actualizarSolicitud: (datos: any) => Promise<{ success: boolean; solicitud?: any; error?: string }>;
     eliminarSolicitud: (id: string) => Promise<{ success: boolean; error?: string }>;
+    obtenerSolicitud: (id: string) => Promise<{ success: boolean; solicitud?: any; error?: string }>;
     actualizarBanco: (id: string, nombre: string, moneda: string) => Promise<{ success: boolean; banco?: any; error?: string }>;
     eliminarBanco: (id: string) => Promise<{ success: boolean; error?: string }>;
     actualizarSede: (id: string, nombre: string) => Promise<{ success: boolean; sede?: any; error?: string }>;
@@ -360,6 +361,7 @@ async function cargarMisSolicitudes() {
       </td>
       <td class="px-8 py-4 text-slate-400 text-xs">${s.observacion_motivo || '-'}</td>
       <td class="px-8 py-4 text-right space-x-2">
+        <button class="btn-ver-solicitud p-1.5 rounded-lg bg-white/10 text-slate-300 hover:bg-white/20 transition-colors" data-id="${s.id}" title="Ver detalle"><i data-lucide="eye" class="w-3.5 h-3.5"></i></button>
         ${s.estado === 'OBSERVADO' ? `<button class="btn-editar-solicitud p-1.5 rounded-lg bg-fluent-accent/15 text-fluent-accent hover:bg-fluent-accent/25 transition-colors" data-id="${s.id}" title="Editar"><i data-lucide="pencil" class="w-3.5 h-3.5"></i></button>` : ''}
         ${s.estado !== 'BANCARIZADO' ? `<button class="btn-eliminar-solicitud p-1.5 rounded-lg bg-red-500/15 text-red-400 hover:bg-red-500/25 transition-colors" data-id="${s.id}" title="Eliminar"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>` : ''}
       </td>
@@ -367,6 +369,9 @@ async function cargarMisSolicitudes() {
   `).join('');
   createIcons();
 
+  tbody.querySelectorAll('.btn-ver-solicitud').forEach(btn => {
+    btn.addEventListener('click', () => abrirModalDetalle(btn.getAttribute('data-id')!));
+  });
   tbody.querySelectorAll('.btn-editar-solicitud').forEach(btn => {
     btn.addEventListener('click', () => abrirModalSolicitud(btn.getAttribute('data-id')));
   });
@@ -518,6 +523,7 @@ async function cargarBandejaCFO() {
         ${renderArchivos(s.archivos)}
       </td>
       <td class="px-8 py-4 text-right space-x-2">
+        <button class="btn-ver-solicitud p-1.5 rounded-lg bg-white/10 text-slate-300 hover:bg-white/20 transition-colors" data-id="${s.id}" title="Ver detalle"><i data-lucide="eye" class="w-3.5 h-3.5"></i></button>
         <button class="btn-bancarizar p-1.5 rounded-lg bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 transition-colors" data-id="${s.id}" title="Bancarizar"><i data-lucide="banknote" class="w-3.5 h-3.5"></i></button>
         <button class="btn-observar p-1.5 rounded-lg bg-red-500/15 text-red-400 hover:bg-red-500/25 transition-colors" data-id="${s.id}" title="Rebotar"><i data-lucide="x-circle" class="w-3.5 h-3.5"></i></button>
       </td>
@@ -525,6 +531,9 @@ async function cargarBandejaCFO() {
   `).join('');
   createIcons();
 
+  tbody.querySelectorAll('.btn-ver-solicitud').forEach(btn => {
+    btn.addEventListener('click', () => abrirModalDetalle(btn.getAttribute('data-id')!));
+  });
   tbody.querySelectorAll('.btn-bancarizar').forEach(btn => {
     btn.addEventListener('click', () => abrirModalBancarizar(btn.getAttribute('data-id')));
   });
@@ -575,6 +584,55 @@ function abrirModalBancarizar(id: string | null) {
   document.getElementById('submit-error-bancarizar')?.classList.add('hidden');
   document.getElementById('upload-progress-bancarizar')?.classList.add('hidden');
   openModal('modal-bancarizar');
+}
+
+// --- MODAL DETALLE ---
+async function abrirModalDetalle(id: string) {
+  const res = await window.electronAPI.db.obtenerSolicitud(id);
+  if (!res.success || !res.solicitud) { toast('Error al cargar detalle: ' + (res.error || 'desconocido'), 'error'); return; }
+  const s = res.solicitud;
+  const prov = s.proveedor_id ? proveedorMap.get(s.proveedor_id) : null;
+  const perfil = s.usuario_id ? perfilMap.get(s.usuario_id) : null;
+
+  setText('detalle-fecha', new Date(s.created_at).toLocaleDateString('es-PE', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }));
+  setText('detalle-solicitante', perfil ? `${perfil.nombre} ${perfil.apellido}` : '—');
+  setText('detalle-proveedor', prov ? prov.nombre_razon_social : '—');
+  setText('detalle-monto', `S/ ${Number(s.monto).toFixed(2)}`);
+  setText('detalle-descripcion', s.descripcion || '—');
+
+  // Estado badge
+  const estadoBadge = document.getElementById('detalle-estado');
+  if (estadoBadge) {
+    const colors: any = { PENDIENTE: 'text-amber-400', OBSERVADO: 'text-red-400', BANCARIZADO: 'text-emerald-400' };
+    estadoBadge.textContent = s.estado;
+    estadoBadge.className = `text-sm font-bold ${colors[s.estado] || 'text-white'}`;
+  }
+
+  // Motivo
+  const motivoW = document.getElementById('detalle-motivo-wrapper');
+  const motivoEl = document.getElementById('detalle-motivo');
+  if (s.estado === 'OBSERVADO' && s.observacion_motivo) {
+    if (motivoW) motivoW.classList.remove('hidden');
+    if (motivoEl) motivoEl.textContent = s.observacion_motivo;
+  } else {
+    if (motivoW) motivoW.classList.add('hidden');
+  }
+
+  // Sustentos
+  const sustEl = document.getElementById('detalle-sustentos');
+  if (sustEl) sustEl.innerHTML = renderArchivos(s.archivos) || '—';
+
+  // Evidencias
+  const evW = document.getElementById('detalle-evidencias-wrapper');
+  const evEl = document.getElementById('detalle-evidencias');
+  if (s.estado === 'BANCARIZADO' && s.evidencias_bancarizacion?.length) {
+    if (evW) evW.classList.remove('hidden');
+    if (evEl) evEl.innerHTML = renderArchivos(s.evidencias_bancarizacion);
+  } else {
+    if (evW) evW.classList.add('hidden');
+  }
+
+  openModal('modal-detalle');
 }
 
 async function submitBancarizar(e: Event) {
@@ -654,10 +712,16 @@ async function cargarBancarizados() {
       <td class="px-8 py-4 font-bold text-emerald-400">S/ ${Number(s.monto).toFixed(2)}</td>
       <td class="px-8 py-4">${renderArchivos(s.archivos)}</td>
       <td class="px-8 py-4 text-right">${renderArchivos(s.evidencias_bancarizacion)}</td>
-      <td class="px-8 py-4 text-right">${esCFO ? `<button class="btn-eliminar-bancarizado p-1.5 rounded-lg bg-red-500/15 text-red-400 hover:bg-red-500/25 transition-colors" data-id="${s.id}" title="Eliminar"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>` : '-'}</td>
+      <td class="px-8 py-4 text-right space-x-2">
+        <button class="btn-ver-solicitud p-1.5 rounded-lg bg-white/10 text-slate-300 hover:bg-white/20 transition-colors" data-id="${s.id}" title="Ver detalle"><i data-lucide="eye" class="w-3.5 h-3.5"></i></button>
+        ${esCFO ? `<button class="btn-eliminar-bancarizado p-1.5 rounded-lg bg-red-500/15 text-red-400 hover:bg-red-500/25 transition-colors" data-id="${s.id}" title="Eliminar"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>` : ''}
+      </td>
     </tr>
   `).join('');
 
+  tbody.querySelectorAll('.btn-ver-solicitud').forEach(btn => {
+    btn.addEventListener('click', () => abrirModalDetalle(btn.getAttribute('data-id')!));
+  });
   tbody.querySelectorAll('.btn-eliminar-bancarizado').forEach(btn => {
     btn.addEventListener('click', async () => {
       const id = btn.getAttribute('data-id');
@@ -1102,6 +1166,10 @@ function setupEventListeners() {
   // Form Bancarizar
   document.getElementById('form-bancarizar')?.addEventListener('submit', submitBancarizar);
   document.getElementById('btn-cancel-bancarizar')?.addEventListener('click', () => closeModal('modal-bancarizar'));
+
+  // Modal Detalle
+  document.getElementById('btn-cerrar-detalle')?.addEventListener('click', () => closeModal('modal-detalle'));
+  document.getElementById('btn-cerrar-detalle-bottom')?.addEventListener('click', () => closeModal('modal-detalle'));
 
   // Form Proveedor
   document.getElementById('form-proveedor')?.addEventListener('submit', async (e) => {

@@ -747,6 +747,21 @@ ipcMain.handle('db:eliminar-solicitud', async (_event, { id }) => {
   }
 });
 
+ipcMain.handle('db:obtener-solicitud', async (_event, { id }) => {
+  if (!supabaseAdmin) return { success: false, error: 'Base de datos no disponible.' };
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('solicitudes')
+      .select('*')
+      .eq('id', id)
+      .single();
+    if (error) return { success: false, error: error.message };
+    return { success: true, solicitud: data };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Error al obtener solicitud' };
+  }
+});
+
 app.whenReady().then(() => {
   createWindow();
   loadExistingToken(); // Carga token existente si lo hay (sin abrir navegador)
