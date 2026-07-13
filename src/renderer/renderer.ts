@@ -1,5 +1,5 @@
 declare const lucide: any;
-const { createIcons, LayoutDashboard, FilePlus, History: HistoryIcon, Bell, Settings, LogOut, Inbox, Users, Shield, Landmark, Building, CircleCheck } = lucide;
+const { createIcons, LayoutDashboard, FilePlus, History: HistoryIcon, Bell, Settings, LogOut, Inbox, Users, Shield, Landmark, Building, CircleCheck, Pencil, Trash2, XCircle, Banknote } = lucide;
 
 interface ArchivoSubido {
   name: string;
@@ -360,11 +360,12 @@ async function cargarMisSolicitudes() {
       </td>
       <td class="px-8 py-4 text-slate-400 text-xs">${s.observacion_motivo || '-'}</td>
       <td class="px-8 py-4 text-right space-x-2">
-        ${s.estado === 'OBSERVADO' ? `<button class="btn-editar-solicitud text-[10px] uppercase font-bold text-fluent-accent hover:underline" data-id="${s.id}">Editar</button>` : ''}
-        ${s.estado !== 'BANCARIZADO' ? `<button class="btn-eliminar-solicitud text-[10px] uppercase font-bold text-red-400 hover:underline" data-id="${s.id}">Eliminar</button>` : ''}
+        ${s.estado === 'OBSERVADO' ? `<button class="btn-editar-solicitud p-1.5 rounded-lg bg-fluent-accent/15 text-fluent-accent hover:bg-fluent-accent/25 transition-colors" data-id="${s.id}" title="Editar"><i data-lucide="pencil" class="w-3.5 h-3.5"></i></button>` : ''}
+        ${s.estado !== 'BANCARIZADO' ? `<button class="btn-eliminar-solicitud p-1.5 rounded-lg bg-red-500/15 text-red-400 hover:bg-red-500/25 transition-colors" data-id="${s.id}" title="Eliminar"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>` : ''}
       </td>
     </tr>
   `).join('');
+  createIcons();
 
   tbody.querySelectorAll('.btn-editar-solicitud').forEach(btn => {
     btn.addEventListener('click', () => abrirModalSolicitud(btn.getAttribute('data-id')));
@@ -517,11 +518,12 @@ async function cargarBandejaCFO() {
         ${renderArchivos(s.archivos)}
       </td>
       <td class="px-8 py-4 text-right space-x-2">
-        <button class="btn-bancarizar text-[10px] uppercase font-bold bg-emerald-500/20 text-emerald-400 px-3 py-1.5 rounded-lg hover:bg-emerald-500/30" data-id="${s.id}">Bancarizar</button>
-        <button class="btn-observar text-[10px] uppercase font-bold bg-red-500/20 text-red-400 px-3 py-1.5 rounded-lg hover:bg-red-500/30" data-id="${s.id}">Rebotar</button>
+        <button class="btn-bancarizar p-1.5 rounded-lg bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 transition-colors" data-id="${s.id}" title="Bancarizar"><i data-lucide="banknote" class="w-3.5 h-3.5"></i></button>
+        <button class="btn-observar p-1.5 rounded-lg bg-red-500/15 text-red-400 hover:bg-red-500/25 transition-colors" data-id="${s.id}" title="Rebotar"><i data-lucide="x-circle" class="w-3.5 h-3.5"></i></button>
       </td>
     </tr>
   `).join('');
+  createIcons();
 
   tbody.querySelectorAll('.btn-bancarizar').forEach(btn => {
     btn.addEventListener('click', () => abrirModalBancarizar(btn.getAttribute('data-id')));
@@ -652,7 +654,7 @@ async function cargarBancarizados() {
       <td class="px-8 py-4 font-bold text-emerald-400">S/ ${Number(s.monto).toFixed(2)}</td>
       <td class="px-8 py-4">${renderArchivos(s.archivos)}</td>
       <td class="px-8 py-4 text-right">${renderArchivos(s.evidencias_bancarizacion)}</td>
-      <td class="px-8 py-4 text-right">${esCFO ? `<button class="btn-eliminar-bancarizado text-[10px] uppercase font-bold text-red-400 hover:underline" data-id="${s.id}">Eliminar</button>` : '-'}</td>
+      <td class="px-8 py-4 text-right">${esCFO ? `<button class="btn-eliminar-bancarizado p-1.5 rounded-lg bg-red-500/15 text-red-400 hover:bg-red-500/25 transition-colors" data-id="${s.id}" title="Eliminar"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>` : '-'}</td>
     </tr>
   `).join('');
 
@@ -720,11 +722,12 @@ async function cargarProveedores() {
         <td class="px-8 py-4">${sede ? sede.nombre : '-'}</td>
         <td class="px-8 py-4">${p.cci || '-'}</td>
         <td class="px-8 py-4 text-right space-x-2">
-          <button class="btn-editar-proveedor text-[10px] uppercase font-bold text-fluent-accent hover:underline" data-id="${p.id}">Editar</button>
-          <button class="btn-eliminar-proveedor text-[10px] uppercase font-bold text-red-400 hover:underline" data-id="${p.id}">Eliminar</button>
+          <button class="btn-editar-proveedor p-1.5 rounded-lg bg-fluent-accent/15 text-fluent-accent hover:bg-fluent-accent/25 transition-colors" data-id="${p.id}" title="Editar"><i data-lucide="pencil" class="w-3.5 h-3.5"></i></button>
+          <button class="btn-eliminar-proveedor p-1.5 rounded-lg bg-red-500/15 text-red-400 hover:bg-red-500/25 transition-colors" data-id="${p.id}" title="Eliminar"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
         </td>
       </tr>`;
     }).join('');
+    createIcons();
     tbody.querySelectorAll('.btn-editar-proveedor').forEach(btn => {
       btn.addEventListener('click', () => {
         const id = btn.getAttribute('data-id');
@@ -771,11 +774,12 @@ async function cargarBancos() {
         <td class="px-8 py-4 font-bold text-white">${b.nombre}</td>
         <td class="px-8 py-4">${b.moneda || 'Soles'}</td>
         <td class="px-8 py-4 text-right space-x-2">
-          <button class="btn-editar-banco text-[10px] uppercase font-bold text-fluent-accent hover:underline" data-id="${b.id}" data-nombre="${b.nombre}" data-moneda="${b.moneda || 'Soles'}">Editar</button>
-          <button class="btn-eliminar-banco text-[10px] uppercase font-bold text-red-400 hover:underline" data-id="${b.id}">Eliminar</button>
+          <button class="btn-editar-banco p-1.5 rounded-lg bg-fluent-accent/15 text-fluent-accent hover:bg-fluent-accent/25 transition-colors" data-id="${b.id}" data-nombre="${b.nombre}" data-moneda="${b.moneda || 'Soles'}" title="Editar"><i data-lucide="pencil" class="w-3.5 h-3.5"></i></button>
+          <button class="btn-eliminar-banco p-1.5 rounded-lg bg-red-500/15 text-red-400 hover:bg-red-500/25 transition-colors" data-id="${b.id}" title="Eliminar"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
         </td>
       </tr>`
     ).join('');
+    createIcons();
     tbody.querySelectorAll('.btn-editar-banco').forEach(btn => {
       btn.addEventListener('click', () => {
         const id = btn.getAttribute('data-id');
@@ -817,11 +821,12 @@ async function cargarSedes() {
       `<tr class="hover:bg-white/5 transition-colors">
         <td class="px-8 py-4 font-bold text-white">${s.nombre}</td>
         <td class="px-8 py-4 text-right space-x-2">
-          <button class="btn-editar-sede text-[10px] uppercase font-bold text-fluent-accent hover:underline" data-id="${s.id}" data-nombre="${s.nombre}">Editar</button>
-          <button class="btn-eliminar-sede text-[10px] uppercase font-bold text-red-400 hover:underline" data-id="${s.id}">Eliminar</button>
+          <button class="btn-editar-sede p-1.5 rounded-lg bg-fluent-accent/15 text-fluent-accent hover:bg-fluent-accent/25 transition-colors" data-id="${s.id}" data-nombre="${s.nombre}" title="Editar"><i data-lucide="pencil" class="w-3.5 h-3.5"></i></button>
+          <button class="btn-eliminar-sede p-1.5 rounded-lg bg-red-500/15 text-red-400 hover:bg-red-500/25 transition-colors" data-id="${s.id}" title="Eliminar"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
         </td>
       </tr>`
     ).join('');
+    createIcons();
     tbody.querySelectorAll('.btn-editar-sede').forEach(btn => {
       btn.addEventListener('click', () => {
         const id = btn.getAttribute('data-id');
@@ -856,11 +861,12 @@ async function cargarUsuarios() {
         <td class="px-8 py-4"><span class="px-2 py-1 bg-white/10 rounded text-[10px] font-bold tracking-wider">${u.rol}</span></td>
         <td class="px-8 py-4">${new Date(u.created_at).toLocaleDateString()}</td>
         <td class="px-8 py-4 text-right space-x-2">
-          <button class="btn-editar-usuario text-[10px] uppercase font-bold text-fluent-accent hover:underline" data-id="${u.id}" data-nombre="${u.nombre}" data-apellido="${u.apellido}" data-rol="${u.rol}">Editar</button>
-          <button class="btn-eliminar-usuario text-[10px] uppercase font-bold text-red-400 hover:underline" data-id="${u.id}">Eliminar</button>
+          <button class="btn-editar-usuario p-1.5 rounded-lg bg-fluent-accent/15 text-fluent-accent hover:bg-fluent-accent/25 transition-colors" data-id="${u.id}" data-nombre="${u.nombre}" data-apellido="${u.apellido}" data-rol="${u.rol}" title="Editar"><i data-lucide="pencil" class="w-3.5 h-3.5"></i></button>
+          <button class="btn-eliminar-usuario p-1.5 rounded-lg bg-red-500/15 text-red-400 hover:bg-red-500/25 transition-colors" data-id="${u.id}" title="Eliminar"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
         </td>
       </tr>
     `).join('');
+    createIcons();
     tbody.querySelectorAll('.btn-editar-usuario').forEach(btn => {
       btn.addEventListener('click', () => {
         const id = btn.getAttribute('data-id');
@@ -932,9 +938,10 @@ function renderFileList(listId: string, files: File[], fileArray: { files: File[
   list.innerHTML = files.map((f, idx) => `
     <div class="flex items-center justify-between bg-white/5 p-2 rounded-lg">
       <span class="text-xs text-slate-300 truncate">${f.name}</span>
-      <button type="button" class="btn-remove-file text-[10px] text-red-400 hover:text-red-300 ml-2" data-index="${idx}">Eliminar</button>
+      <button type="button" class="btn-remove-file p-1 rounded bg-red-500/15 text-red-400 hover:bg-red-500/25 transition-colors ml-2" data-index="${idx}" title="Eliminar"><i data-lucide="x" class="w-3 h-3"></i></button>
     </div>
   `).join('');
+  createIcons();
 
   list.querySelectorAll('.btn-remove-file').forEach(btn => {
     btn.addEventListener('click', () => {

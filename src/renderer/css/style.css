@@ -49,6 +49,19 @@
     border-left: 1px solid rgba(255, 255, 255, 0.06);
   }
 
+  .mica-section table td,
+  .mica-section table th {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .mica-section table th:last-child,
+  .mica-section table td:last-child {
+    overflow: visible;
+    white-space: nowrap;
+  }
+
   .fluent-card {
     background: linear-gradient(135deg, rgba(35, 35, 35, 0.55) 0%, rgba(20, 20, 20, 0.45) 100%);
     backdrop-filter: blur(40px);
