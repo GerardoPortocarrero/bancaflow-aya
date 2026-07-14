@@ -1,39 +1,44 @@
-# Hoja de Ruta de Desarrollo: BancaFlow (Fluent Design Edition)
+# Hoja de Ruta de Desarrollo: BancaFlow
 
-Esta ruta organiza la construcción del sistema en fases lógicas, priorizando la seguridad y la estética de Windows 11.
+> **Estado actual:** Funcionalidad core completa. Pendientes de pulido y features secundarios.
 
 ---
 
-## Fase 1: Entorno y UI Base (Fluent Design)
-*   **Configuración de Tailwind:** Instalación y configuración de `tailwind.config.js`.
-*   **Definición de Tokens de Diseño:**
-    *   **Colores:** Usar la paleta de Windows (Neutral Grays, Accent Blue).
-    *   **Efectos:** Configurar clases para `glassmorphism` (Efecto Mica).
-*   **Layout Principal:** Crear la ventana con una barra lateral (Sidebar) semi-transparente y un área de contenido con bordes redondeados (`rounded-xl`).
+## ✅ Fase 1: Entorno y UI Base (COMPLETADA)
+- Configuración de Tailwind con tokens de diseño Fluent (glassmorphism, Mica effect).
+- Layout principal: Sidebar (`w-64`) + Header (`h-[40px]`) + Contenido (`mica-section`).
+- Ventana Electron: `transparent: true`, `vibrancy: 'sidebar'`, `backgroundMaterial: 'acrylic'`.
 
-## Fase 2: Conectividad y Seguridad (Backend-less)
-*   **Supabase Setup:** Configurar el cliente de Supabase en el proceso de Electron.
-*   **Auth Service:** Crear la pantalla de Login con validación visual.
-*   **Google Drive Bridge:** Configurar la cuenta de servicio en el `Main Process` para recibir archivos desde la UI.
+## ✅ Fase 2: Conectividad y Seguridad (COMPLETADA)
+- Cliente Supabase con dos modos: anon key (renderer) y service_role key (main process).
+- Auth service con login/logout vía `supabase.auth.signInWithPassword`.
+- Google Drive OAuth 2.0 Desktop App (no service account). Token cachead en disco.
+- Sesión cachead en `currentSession` (no persistSession).
 
-## Fase 3: Lógica de Negocio y Procesamiento
-*   **Formulario de Solicitud:** Implementar validaciones de campos y el aviso de detracciones (>700 Soles).
-*   **Pipeline de Archivos:**
-    1.  Usuario arrastra archivo.
-    2.  `Main Process` recibe el buffer.
-    3.  **Sharp** comprime (WebP).
-    4.  Subida a Google Drive.
-    5.  Registro en Supabase con la URL resultante.
+## ✅ Fase 3: Lógica de Negocio (COMPLETADA)
+- Formulario de solicitud con validaciones (detracción > 700 Soles, archivos obligatorios).
+- Pipeline: archivo → Drive (subida directa, sin compresión Sharp).
+- Estados: PENDIENTE → OBSERVADO → PENDIENTE (corregida) | BANCARIZADO.
+- Soft delete con columna `deleted_at`.
 
-## Fase 4: Dashboard y Roles
-*   **Vista Solicitante:** Historial de sus propias solicitudes.
-*   **Vista CFO:** Tabla con efecto `hover` estilo Fluent para revisar y aprobar.
-*   **Módulo de Corrección:** Flujo para que el CFO devuelva solicitudes con comentarios.
+## ✅ Fase 4: Dashboard y Roles (COMPLETADA)
+- Vista Mis Solicitudes (creador ve sus solicitudes, edita observadas).
+- Vista Bandeja CFO (solo PENDIENTE, auto-refresh 10s, observar/bancarizar).
+- Vista Bancarizados (historial de solicitudes bancarizadas).
+- Dashboard con contadores y tabla de recientes.
+- Modal de detalle para ver información completa de cualquier solicitud.
 
-## Fase 5: Reportes y Cierre
-*   **Exportador Excel:** Integración con `exceljs`.
-*   **Validación de Cierre:** Bloqueo de estado `BANCARIZADO` hasta que existan los sustentos obligatorios.
+## ✅ Fase 5: CRUD Administrativo (COMPLETADA)
+- Gestión de Proveedores (CFO/ADMIN).
+- Gestión de Bancos (ADMIN).
+- Gestión de Sedes (ADMIN).
+- Gestión de Usuarios (ADMIN).
 
-## Fase 6: Pulido y Compilación
-*   **Iconografía:** Usar "Segoe Fluent Icons" o "Lucide Icons" para mantener la estética.
-*   **Compilación Portable:** Ejecutar `npm run dist` y testear el `.exe` en una máquina limpia (sin Node.js instalado).
+## 🔲 Fase 6: Reportes y Cierre (PENDIENTE)
+- Exportador Excel (`exceljs`).
+- Validación de cierre con bloqueo de estado BANCARIZADO hasta completar sustentos.
+
+## 🔲 Fase 7: Pulido y Compilación (PENDIENTE)
+- Iconografía consistente (Lucide Icons).
+- Compilación portable: `npm run dist` → `.exe`.
+- Smoke tests antes de cada compilación.

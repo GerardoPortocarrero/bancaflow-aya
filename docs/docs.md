@@ -1,109 +1,194 @@
 # Documentación Oficial del Sistema: BancaFlow
-**Proceso:** Gestión Centralizada de Bancarización  
-**Costo de Infraestructura:** $0 USD (100% Gratis)  
-**Tipo de Aplicación:** Escritorio Nativo (`.exe` para Windows vía Electron)  
+**Proceso:** Gestión Centralizada de Bancarización
+**Costo de Infraestructura:** $0 USD (100% Gratis)
+**Tipo de Aplicación:** Escritorio Nativo (`.exe` para Windows vía Electron)
 
 ---
 
 ## 1. Contexto del Problema y de la Solución
 
-### 🚨 El Problema (El Caos Actual)
+### El Problema (El Caos Actual)
 El flujo administrativo actual de la empresa sufre de "islas de información" y una grave falta de control centralizado. Los departamentos de **RRHH**, **Administración** y **Contabilidad** generan solicitudes de pago que se envían al **CFO (Gerente de Finanzas)** de manera informal mediante chats de WhatsApp o compartiéndose un archivo Excel local que cambia de manos constantemente.
 
 Este desorden operativo genera tres riesgos críticos para el negocio:
 * **Pérdida de trazabilidad:** No existe un registro histórico fiable de quién solicitó un pago, cuándo fue aprobado por el CFO o si realmente se llegó a bancarizar.
-* **Vulnerabilidad fiscal (Detracciones):** Al procesar los montos de forma manual y visual, existe un alto riesgo humano de omitir el depósito de la detracción cuando un servicio supera los **700 Soles**, lo que expone a la empresa a multas y sanciones por parte de la SUNAT.
-* **Desorden documentario:** Los sustentos digitales (archivos XML, PDFs de facturas y capturas de pantalla de las transferencias) quedan dispersos en computadoras individuales o se pierden en el historial de WhatsApp.
+* **Vulnerabilidad fiscal (Detracciones):** Al procesar los montos de forma manual, existe un alto riesgo humano de omitir el depósito de la detracción cuando un servicio supera los **700 Soles**.
+* **Desorden documentario:** Los sustentos digitales (XML, PDFs, capturas) quedan dispersos en computadoras individuales o se pierden en el historial de WhatsApp.
 
-### 💡 La Solución (El Estado Ideal con BancaFlow)
-**BancaFlow** es una aplicación de escritorio centralizada que unifica todo el proceso bajo un único software. Cada área accede al sistema con un rol específico. La información y los documentos ya no viajan por canales informales; ahora se almacenan de forma segura en una base de datos en la nube de forma automática. 
-
-El sistema automatiza la lógica de negocio (como el cálculo y la alerta obligatoria de detracciones), reduce el peso de los archivos antes de subirlos para optimizar el espacio, y restringe el cierre de los flujos hasta que el CFO adjunte los reportes bancarios correspondientes. El resultado es la eliminación absoluta de los mensajes de coordinación y los Excels diarios.
+### La Solución (El Estado Ideal con BancaFlow)
+**BancaFlow** es una aplicación de escritorio centralizada que unifica todo el proceso bajo un único software. Cada área accede al sistema con un rol específico. La información y los documentos ya no viajan por canales informales; ahora se almacenan de forma segura en una base de datos en la nube y en Google Drive.
 
 ---
 
 ## 2. Arquitectura del Sistema
 
-El sistema adopta una arquitectura **Cliente-Servidor (Serverless)** híbrida, optimizada para operar a costo cero y garantizar almacenamiento masivo por más de una década sin necesidad de servidores locales de pago.
+El sistema adopta una arquitectura **Cliente-Servidor (Serverless)** híbrida, optimizada para operar a costo cero.
 
+```
               +-----------------------------------+
               |    BancaFlow.exe (Electron + TS)  |
               +-----------------------------------+
                 /                               \
- (Envía Archivo /                                \ (Guarda Datos y Link
-  Usa Token .json)                                \ de Drive de forma segura)
-              v                                  v
-+-----------------------------+            +----------------------------+
-| Google Drive (Carpeta)      |            | Supabase SQL (Postgres)    |
-| - Almacena PDFs e Imágenes  |            | - Guarda: ID, Monto,       |
-| - Capacidad: 15 GB ($0)     |            |   Estado, Link de Drive    |
-+-----------------------------+            +----------------------------+
+  (OAuth 2.0 /                                   \ (Guarda Datos y Link
+   Sube archivo)                                   \ de Drive en DB)
+              v                                    v
++-----------------------------+           +----------------------------+
+| Google Drive (Carpeta)      |           | Supabase SQL (Postgres)    |
+| - Almacena PDFs e Imágenes  |           | - auth (email/password)    |
+| - Capacidad: 15 GB ($0)     |           | - perfiles, solicitudes    |
+| - Cuenta personal OAuth 2.0 |           |   proveedores, bancos, etc.|
++-----------------------------+           +----------------------------+
 
+```
 
-### Descripción de los Componentes:
-1.  **Cliente Desktop (BancaFlow App):** Aplicación nativa para Windows desarrollada con **Electron** y **TypeScript**, compilada en un único archivo ejecutable portable. Utiliza tecnologías web (HTML/CSS/JS) para la interfaz pero con acceso total al sistema de archivos local.
-2.  **Capa de Autenticación y Datos (Supabase SQL):** Base de datos relacional (PostgreSQL) en la nube que gestiona el acceso de los usuarios mediante el SDK oficial de Supabase para JavaScript/TypeScript.
-3.  **Capa de Almacenamiento Masivo (Google Drive API via Cuenta de Servicio):** Espacio centralizado de 15 GB gestionado mediante la librería `googleapis` en Node.js.
+### Clientes de Supabase
+El sistema usa **dos clientes** de Supabase:
+| Cliente | Key | Propósito |
+|---------|-----|-----------|
+| `supabase` (renderer) | `ANON_KEY` | Login/logout del usuario, `persistSession: false` |
+| `supabaseAdmin` (main) | `SERVICE_ROLE_KEY` | Listar solicitudes (bypass RLS para CFO), operaciones admin |
+
+### Autenticación con Google Drive
+- **OAuth 2.0 Desktop App** (no service account).
+- Se abre un servidor HTTP local + navegador para autorizar.
+- El `refresh_token` se guarda en `%APPDATA%\bancaflow\drive_tokens.json`.
+- El token se refresca automáticamente vía `oauth2Client.on('tokens')`.
 
 ---
 
-## 3. Tecnologías y su Uso (Costo $0)
+## 3. Roles y Permisos
 
-Para garantizar un desarrollo robusto sin costos de licenciamiento ni suscripciones mensuales, se seleccionó el siguiente ecosistema de código abierto y capas gratuitas (*free-tiers*):
+| Rol | Solicitudes | Proveedores | Bancos/Sedes | Usuarios |
+|-----|-------------|-------------|--------------|----------|
+| **RRHH** | Enviar, arreglar observadas | Ver | Ver | Ver |
+| **CONTADOR** | Enviar, arreglar observadas | Ver | Ver | Ver |
+| **CFO** | Ver bandeja, aprobar, observar, bancarizar | CRUD | Ver | Ver |
+| **ADMIN** | CRUD completo | CRUD | CRUD | CRUD |
+
+- **Bandeja CFO:** solo muestra solicitudes en estado `PENDIENTE`.
+- **Mis Solicitudes:** el creador ve sus solicitudes; si están `OBSERVADO`, puede editarlas y reenviarlas.
+
+---
+
+## 4. Flujo de Estados
+
+```
+PENDIENTE ──> OBSERVADO ──> PENDIENTE (corregida)
+    │
+    └──> BANCARIZADO
+```
+
+- **PENDIENTE:** Creada, espera revisión del CFO.
+- **OBSERVADO:** CFO la rechaza con motivo. El creador puede editarla y reenviarla (vuelve a PENDIENTE).
+- **BANCARIZADO:** CFO confirma la transferencia y adjunta evidencias. Estado terminal.
+
+### Soft Delete
+- Las solicitudes no se eliminan físicamente. Se asigna `deleted_at` con el timestamp actual.
+- Todas las queries filtran con `.is('deleted_at', null)`.
+- Solo ADMIN y CFO pueden hacer soft delete.
+
+---
+
+## 5. Tecnologías y su Uso (Costo $0)
 
 | Tecnología | Rol en el Sistema | Justificación de Costo $0 |
-| :--- | :--- | :--- |
-| **Electron** | Framework para aplicaciones de escritorio. | Código abierto, permite usar el motor de Chrome para una interfaz fluida y fácil de compilar a `.exe`. |
-| **TypeScript** | Lenguaje de programación principal. | Superconjunto de JavaScript que añade tipos estáticos, evitando errores comunes en el manejo de montos y estados financieros. |
-| **Supabase SDK** | Gestión de base de datos y autenticación. | SDK oficial para JS/TS. El plan gratuito incluye **500 MB** de base de datos relacional. |
-| **Google Drive API (`googleapis`)** | Almacenamiento en la nube para documentos pesados. | Proporciona **15 GB** de almacenamiento gratuito mediante una cuenta de servicio. |
-| **Sharp** | Procesamiento y compresión extrema de imágenes. | Librería de Node.js ultra rápida para convertir capturas a WebP/JPEG optimizado. |
-| **PDF-Lib** | Manipulación y optimización de archivos PDF. | Permite procesar PDFs en el cliente antes de subirlos. |
-| **Electron Builder** | Empaquetado a ejecutable portable. | Herramienta que genera el `.exe` único que no requiere instalación. |
+|------------|-------------------|---------------------------|
+| **Electron** | Framework para aplicaciones de escritorio | Código abierto |
+| **TypeScript** | Lenguaje de programación principal | Tipado estricto para evitar errores financieros |
+| **Supabase SDK** | Base de datos y autenticación | Plan gratuito: 500 MB |
+| **Google Drive API (`googleapis`)** | Almacenamiento de archivos vía OAuth 2.0 | 15 GB gratuitos (cuenta personal) |
+| **Electron Builder** | Empaquetado a ejecutable portable | Código abierto |
 
 ---
 
-## 4. Estrategia de Compresión y Optimización de Archivos
+## 6. Funcionalidades de UI
 
-Para maximizar los 15 GB de Google Drive y garantizar un rendimiento inmediato al abrir documentos, el sistema `BancaFlow.exe` procesará localmente cada archivo antes de subirlo a la nube:
-
-* **Para Imágenes (Capturas de pantalla de bancos/recibos):** El sistema utilizará la librería **Sharp** para convertir la imagen a formato **WebP**, reduciendo la resolución y calidad significativamente. Objetivo: ~10KB a 50KB por imagen.
-* **Para PDFs:** El sistema procesará los PDFs para eliminar metadatos innecesarios y optimizar el contenido mediante **pdf-lib**, asegurando que el espacio de 15 GB sea suficiente para años de operación.
-
----
-
-## 5. Requerimientos del Sistema
-
-### Requerimientos Funcionales (RF)
-
-#### 🔑 Gestión de Usuarios y Accesos
-* **RF1.1:** El sistema deberá permitir el inicio de sesión mediante credenciales únicas (correo y contraseña) usando la autenticación de Supabase.
-* **RF1.2:** El sistema deberá validar y restringir las pantallas y opciones según el rol asignado (**RRHH**, **Administrador**, **Contador**, **CFO**).
-
-#### 📝 Flujo de Solicitudes (RRHH / Administrador / Contador)
-* **RF2.1:** El usuario solicitante deberá poder registrar una nueva petición de pago completando: Proveedor, Descripción del servicio/suministro, Monto (en Soles) y adjuntando el sustento digital (XML, PDF o captura).
-* **RF2.2:** **[Compresión en Origen]:** Antes de subir cualquier archivo adjunto, el sistema (vía Node.js/Sharp) deberá procesar el archivo localmente para reducir su peso al mínimo técnico legible.
-* **RF2.3:** **[Regla de Negocio Crítica]:** Al ingresar el monto, si este es mayor a **700 Soles**, BancaFlow deberá marcar automáticamente la solicitud con la etiqueta interna e informativa: `Requiere Detracción = SÍ`.
-
-#### 📊 Panel de Revisión y Aprobación (CFO)
-* **RF3.1:** El CFO deberá visualizar un tablero centralizado con todas las solicitudes que se encuentren en estado `Pendiente de Revisión`.
-* **RF3.2:** **[Visualización Integrada]:** El CFO deberá poder previsualizar de forma nativa la imagen o el PDF adjunto dentro de la misma interfaz de Electron.
-* **RF3.3:** El CFO deberá tener la facultad de `Aprobar` o `Rechazar` la solicitud. En caso de rechazo, el sistema obligará a escribir el motivo.
-
-#### 🏦 Proceso de Bancarización (CFO)
-* **RF4.1:** Para las solicitudes aprobadas, el CFO podrá cambiar el estado a `Bancarizado` una vez realizada la transferencia real en el banco.
-* **RF4.2:** **[Bloqueo de Seguridad]:** El sistema no permitirá cambiar el estado a `Bancarizado` a menos que el CFO adjunte obligatoriamente el comprobante de transferencia bancaria y la constancia de depósito de detracción si corresponde.
-
-#### 📈 Consultas y Reportes
-* **RF5.1:** El sistema permitirá a todos los roles visualizar el historial de transacciones en tiempo real.
-* **RF5.2:** El sistema contará con un botón para **Exportar a Excel**, usando librerías como `exceljs` en Node.js.
+- **Auto-refresh:** Cada 10 segundos se recargan los datos de la vista activa. Al cambiar de pestaña se fuerza recarga.
+- **Skeleton loading:** Mientras cargan los datos, las tablas muestran filas esqueleto con shimmer animation.
+- **Sistema de toasts:** Reemplaza `alert()` con notificaciones animadas (success, error, warning, info).
+- **Modales animados:** Apertura/cierre con animación CSS, cierre con Escape y click en backdrop, auto-foco en primer input.
+- **Diálogo de confirmación:** `confirmDialog()` reemplaza `confirm()` con overlay estilizado.
+- **Estado de Drive:** Indicador clickeable en el header que muestra el estado real de la conexión a Google Drive.
+- **Scrollbar personalizada:** Delgada y semitransparente, consistente con el tema oscuro.
 
 ---
 
-### Requerimientos No Funcionales (RNF)
+## 7. Layout y Estructura Visual
 
-* **RNF1 (Costo Cero):** El costo total de infraestructura debe ser de **0 USD** permanentemente.
-* **RNF2 (Cero Instalaciones):** La aplicación debe distribuirse como un único archivo ejecutable portable (`BancaFlow.exe`). El usuario final no requerirá instalar Node.js ni otros entornos.
-* **RNF3 (Seguridad de Datos y Llaves):** Las credenciales de la API de Google Drive y Supabase deben manejarse de forma segura, preferiblemente encriptadas o inyectadas durante el proceso de compilación del `.exe`.
-* **RNF4 (Robustez de Tipos):** Se utilizará **TypeScript** para garantizar que los cálculos financieros y los estados de flujo sean consistentes y libres de errores de tipo en tiempo de ejecución.
-* **RNF5 (Portabilidad Local):** La aplicación cliente se ejecutará de forma nativa en sistemas operativos Windows 10 y Windows 11.
+```
++---------------------------------------------+
+| SIDEBAR (w-64)    | HEADER (h-[40px])       |
+| drag-region        | título | [Drive] [🔔]  |
+| pt-10              |           [⚙️]          |
+| Logo               |  ← pr-[150px] (botones  |
+| Navegación         |    nativos de ventana)  |
+| Usuario/logout     |                         |
+|--------------------+-------------------------|
+|                    | CONTENIDO               |
+|                    | mica-section            |
+|                    | (scroll, tablas,        |
+|                    |  formularios)           |
++---------------------------------------------+
+```
+
+### Patrones de tabla
+- `table-fixed` + `<colgroup>` con anchos porcentuales (evita scroll horizontal).
+- Celdas con `overflow: hidden; text-overflow: ellipsis; white-space: nowrap` excepto columna Acción.
+- Botones de acción como iconos Lucide compactos (`p-1.5 rounded-lg`) con colores semánticos.
+- Toolbar compacto: buscador y botón "Añadir" en una sola fila.
+
+### Secciones con mica-section
+Las vistas principales usan `mica-section`: fondo glass, bordes redondeados, sin `fluent-card` envolvente en la tabla (la tabla va de borde a borde dentro de la sección).
+
+---
+
+## 8. Variables de Entorno (`.env`)
+
+```env
+SUPABASE_URL=...
+SUPABASE_ANON_KEY=...
+SUPABASE_SERVICE_ROLE_KEY=...
+GOOGLE_CLIENT_ID=...
+GOOGLE_CLIENT_SECRET=...
+GOOGLE_DRIVE_FOLDER_ID=...
+```
+
+- `SUPABASE_SERVICE_ROLE_KEY`: necesaria para `supabaseAdmin` (bypass RLS).
+- Las claves de Google Drive se obtienen desde Google Cloud Console → APIs & Services → Credentials → OAuth 2.0 Desktop App.
+- La API de Google Drive debe estar habilitada en el proyecto de Google Cloud.
+
+---
+
+## 9. Requerimientos del Sistema
+
+### Funcionales (RF)
+
+#### Gestión de Usuarios y Accesos
+- **RF1.1:** Login mediante correo y contraseña usando autenticación nativa de Supabase.
+- **RF1.2:** Validación y restricción de pantallas según rol (RRHH, CONTADOR, CFO, ADMIN).
+
+#### Flujo de Solicitudes (RRHH / CONTADOR / ADMIN)
+- **RF2.1:** El usuario puede crear solicitud con: Proveedor, Descripción, Monto (Soles) y Sustentos (archivos).
+- **RF2.2:** Si monto > 700 Soles, se marca automáticamente `Requiere Detracción`.
+- **RF2.3:** El creador puede editar solicitudes en estado OBSERVADO y reenviarlas.
+
+#### Panel de Revisión (CFO)
+- **RF3.1:** El CFO ve un tablero con todas las solicitudes en estado PENDIENTE.
+- **RF3.2:** El CFO puede OBSERVAR (motivo obligatorio) o BANCARIZAR (evidencias obligatorias).
+- **RF3.3:** Auto-refresh cada 10s para ver nuevas solicitudes sin recargar manualmente.
+
+#### Bancarización
+- **RF4.1:** El CFO adjunta comprobantes de transferencia bancaria como evidencias.
+- **RF4.2:** Una vez bancarizada, la solicitud es terminal (no se puede modificar).
+
+#### Consultas
+- **RF5.1:** Todos los roles pueden ver su historial de solicitudes.
+- **RF5.2:** Modal de detalle para ver información completa de cualquier solicitud (con sustentos y evidencias).
+- **RF5.3:** Dashboard con contadores (pendientes, por bancarizar, bancarizados hoy) y tabla de recientes.
+
+### No Funcionales (RNF)
+- **RNF1 (Costo Cero):** Infraestructura = $0 USD permanentemente.
+- **RNF2 (Portable):** Único `.exe`, no requiere instalación de Node.js.
+- **RNF3 (Seguridad):** API keys manejadas en main process (no expuestas al renderer). Bridge via preload con contextIsolation.
+- **RNF4 (Tipado Estricto):** TypeScript strict mode para consistencia financiera.
+- **RNF5 (Windows):** Compatible con Windows 10 y 11.
