@@ -44,6 +44,9 @@ interface IElectronAPI {
     listarPerfiles: () => Promise<{ success: boolean; perfiles?: any[]; error?: string }>;
     actualizarUsuario: (id: string, nombre: string, apellido: string, rol: string) => Promise<{ success: boolean; error?: string }>;
     eliminarUsuario: (id: string) => Promise<{ success: boolean; error?: string }>;
+    listarNotificaciones: (usuarioId: string) => Promise<{ success: boolean; notificaciones?: any[]; error?: string }>;
+    marcarNotificacionesLeidas: (usuarioId: string) => Promise<{ success: boolean; error?: string }>;
+    eliminarNotificacion: (id: string) => Promise<{ success: boolean; error?: string }>;
   };
 }
 
@@ -63,6 +66,8 @@ let solicitudFiles: File[] = [];
 let bancarizarFiles: File[] = [];
 let proveedorMap = new Map<string, any>();
 let perfilMap = new Map<string, any>();
+let notificaciones: any[] = [];
+let notifDropdownAbierto = false;
 
 // --- DOM REFS ---
 const loginScreen = document.getElementById('login-screen');
@@ -260,8 +265,91 @@ function iniciarAutoRefresh() {
       } else if (targetId === 'view-dashboard') {
         await cargarDashboard();
       }
+      await cargarNotificaciones();
     } catch { /* silencioso */ }
   }, 10000);
+}
+
+// --- NOTIFICACIONES ---
+async function cargarNotificaciones() {
+  if (!currentUser?.id) return;
+  try {
+    const res = await window.electronAPI.db.listarNotificaciones(currentUser.id);
+    if (res.success && res.notificaciones) {
+      notificaciones = res.notificaciones;
+    }
+  } catch { /* silencioso */ }
+  actualizarBadgeNotif();
+}
+
+function actualizarBadgeNotif() {
+  const badge = document.getElementById('notif-badge');
+  const btn = document.getElementById('btn-notificaciones');
+  if (!badge) return;
+  const noLeidas = notificaciones.filter(n => !n.leido).length;
+  badge.textContent = noLeidas > 99 ? '99+' : String(noLeidas);
+  badge.classList.toggle('hidden', noLeidas === 0);
+  if (btn) btn.classList.toggle('animate-pulse', noLeidas > 0);
+}
+
+function renderNotificaciones() {
+  const container = document.getElementById('notif-lista');
+  if (!container) return;
+  if (notificaciones.length === 0) {
+    container.innerHTML = '<div class="p-6 text-center text-sm text-slate-400">Sin notificaciones</div>';
+    return;
+  }
+  container.innerHTML = notificaciones.map(n => {
+    const fecha = new Date(n.created_at).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+    const tipoIcono: any = { nueva_solicitud: 'bell', rebote: 'x-circle', bancarizado: 'circle-check', eliminado: 'trash-2' };
+    const tipoColor: any = { nueva_solicitud: 'text-fluent-accent', rebote: 'text-red-400', bancarizado: 'text-emerald-400', eliminado: 'text-slate-400' };
+    return `<div class="flex items-start gap-3 px-4 py-3 hover:bg-white/5 transition-colors ${n.leido ? 'opacity-60' : ''}">
+      <i data-lucide="${tipoIcono[n.tipo] || 'bell'}" class="w-4 h-4 mt-0.5 ${tipoColor[n.tipo] || 'text-slate-400'} shrink-0"></i>
+      <div class="flex-1 min-w-0">
+        <p class="text-xs text-slate-200 font-semibold leading-snug">${n.mensaje}</p>
+        <p class="text-[10px] text-slate-500 mt-1">${fecha}</p>
+      </div>
+      <button class="btn-eliminar-notif p-1 rounded hover:bg-white/10 transition-colors text-slate-500 hover:text-red-400 shrink-0" data-id="${n.id}" title="Eliminar">
+        <i data-lucide="x" class="w-3 h-3"></i>
+      </button>
+    </div>`;
+  }).join('');
+  createIcons();
+  container.querySelectorAll('.btn-eliminar-notif').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.getAttribute('data-id');
+      if (!id) return;
+      const r = await window.electronAPI.db.eliminarNotificacion(id);
+      if (r.success) {
+        notificaciones = notificaciones.filter(n => n.id !== id);
+        actualizarBadgeNotif();
+        renderNotificaciones();
+      }
+    });
+  });
+}
+
+function toggleNotifDropdown() {
+  notifDropdownAbierto = !notifDropdownAbierto;
+  const panel = document.getElementById('notif-panel');
+  const btn = document.getElementById('btn-notificaciones');
+  if (!panel) return;
+  if (notifDropdownAbierto && btn) {
+    const rect = btn.getBoundingClientRect();
+    panel.style.top = (rect.bottom + 8) + 'px';
+    panel.style.right = (window.innerWidth - rect.right) + 'px';
+    panel.style.left = 'auto';
+    panel.classList.remove('hidden');
+    renderNotificaciones();
+    // Marcar todas como leídas
+    if (currentUser?.id) {
+      window.electronAPI.db.marcarNotificacionesLeidas(currentUser.id);
+      notificaciones.forEach(n => n.leido = true);
+      actualizarBadgeNotif();
+    }
+  } else {
+    panel.classList.add('hidden');
+  }
 }
 
 // --- CARGA DE DATOS ---
@@ -270,6 +358,7 @@ async function cargarDatosIniciales() {
     cargarProveedores(),
     cargarBancos(),
     cargarSedes(),
+    cargarNotificaciones(),
   ]);
   if (currentUser?.rol === 'ADMINISTRADOR') {
     await cargarUsuarios();
@@ -1132,6 +1221,22 @@ function setupEventListeners() {
       if (loginBtn) loginBtn.disabled = false;
       if (loginBtnText) loginBtnText.textContent = 'Iniciar Sesión';
       if (loginBtnSpinner) loginBtnSpinner.classList.add('hidden');
+    }
+  });
+
+  // Notificaciones: usar mousedown para evitar interferencia de drag-region
+  document.getElementById('btn-notificaciones')?.addEventListener('mousedown', (e) => {
+    e.stopPropagation();
+    toggleNotifDropdown();
+  });
+
+  // Cerrar panel al hacer clic fuera
+  document.addEventListener('mousedown', (e) => {
+    const panel = document.getElementById('notif-panel');
+    const btn = document.getElementById('btn-notificaciones');
+    if (notifDropdownAbierto && panel && btn && !panel.contains(e.target as Node) && !btn.contains(e.target as Node)) {
+      notifDropdownAbierto = false;
+      panel.classList.add('hidden');
     }
   });
 

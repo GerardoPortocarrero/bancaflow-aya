@@ -142,7 +142,35 @@ CREATE POLICY "Admin y CFO pueden eliminar solicitudes"
     USING (EXISTS (SELECT 1 FROM perfiles WHERE id = auth.uid() AND rol IN ('CFO', 'ADMINISTRADOR')) AND deleted_at IS NULL)
     WITH CHECK (deleted_at IS NOT NULL);
 
--- 11. Función para actualizar updated_at automáticamente
+-- 11. TABLA NOTIFICACIONES
+CREATE TABLE IF NOT EXISTS public.notificaciones (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    usuario_id UUID NOT NULL REFERENCES auth.users(id),
+    tipo TEXT NOT NULL CHECK (tipo IN ('nueva_solicitud', 'rebote', 'bancarizado', 'eliminado')),
+    mensaje TEXT NOT NULL,
+    solicitud_id UUID REFERENCES public.solicitudes(id) ON DELETE SET NULL,
+    leido BOOLEAN DEFAULT false,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE public.notificaciones ENABLE ROW LEVEL SECURITY;
+
+-- Usuarios ven sus propias notificaciones
+CREATE POLICY "Usuarios ven sus notificaciones"
+    ON public.notificaciones FOR SELECT TO authenticated
+    USING (auth.uid() = usuario_id);
+
+-- Usuarios marcan sus notificaciones como leídas
+CREATE POLICY "Usuarios actualizan sus notificaciones"
+    ON public.notificaciones FOR UPDATE TO authenticated
+    USING (auth.uid() = usuario_id);
+
+-- Usuarios eliminan sus notificaciones
+CREATE POLICY "Usuarios eliminan sus notificaciones"
+    ON public.notificaciones FOR DELETE TO authenticated
+    USING (auth.uid() = usuario_id);
+
+-- 12. Función para actualizar updated_at automáticamente
 CREATE OR REPLACE FUNCTION actualizar_updated_at()
 RETURNS TRIGGER AS $$
 BEGIN

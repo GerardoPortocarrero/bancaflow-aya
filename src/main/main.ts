@@ -632,6 +632,26 @@ ipcMain.handle('db:crear-solicitud', async (_event, datos) => {
       .single();
 
     if (error) return { success: false, error: error.message };
+
+    // Notificar solo a CFO sobre la nueva solicitud (ADMIN solo ve bancarizados)
+    if (supabaseAdmin && data) {
+      try {
+        const { data: admins } = await supabaseAdmin
+          .from('perfiles')
+          .select('id')
+          .eq('rol', 'CFO');
+        if (admins && admins.length > 0) {
+          const notifs = admins.map((a: any) => ({
+            usuario_id: a.id,
+            tipo: 'nueva_solicitud',
+            mensaje: `Nueva solicitud de pago por S/ ${Number(data.monto).toFixed(2)}`,
+            solicitud_id: data.id
+          }));
+          await supabaseAdmin.from('notificaciones').insert(notifs);
+        }
+      } catch { /* notificaciones no críticas */ }
+    }
+
     return { success: true, solicitud: data };
   } catch (err: any) {
     return { success: false, error: err.message || 'Error al registrar solicitud' };
@@ -682,6 +702,19 @@ ipcMain.handle('db:observar-solicitud', async (_event, { id, motivo }) => {
       .single();
 
     if (error) return { success: false, error: error.message };
+
+    // Notificar al creador de la solicitud
+    if (data) {
+      try {
+        await supabaseAdmin.from('notificaciones').insert({
+          usuario_id: data.usuario_id,
+          tipo: 'rebote',
+          mensaje: `Tu solicitud fue observada: ${motivo.substring(0, 80)}${motivo.length > 80 ? '...' : ''}`,
+          solicitud_id: data.id
+        });
+      } catch { /* notificaciones no críticas */ }
+    }
+
     return { success: true, solicitud: data };
   } catch (err: any) {
     return { success: false, error: err.message || 'Error al observar solicitud' };
@@ -704,6 +737,19 @@ ipcMain.handle('db:bancarizar-solicitud', async (_event, { id, evidencias }) => 
       .single();
 
     if (error) return { success: false, error: error.message };
+
+    // Notificar al creador
+    if (data) {
+      try {
+        await supabaseAdmin.from('notificaciones').insert({
+          usuario_id: data.usuario_id,
+          tipo: 'bancarizado',
+          mensaje: `Tu solicitud de S/ ${Number(data.monto).toFixed(2)} fue bancarizada`,
+          solicitud_id: data.id
+        });
+      } catch { /* notificaciones no críticas */ }
+    }
+
     return { success: true, solicitud: data };
   } catch (err: any) {
     return { success: false, error: err.message || 'Error al bancarizar solicitud' };
@@ -736,11 +782,31 @@ ipcMain.handle('db:actualizar-solicitud', async (_event, { id, descripcion, prov
 ipcMain.handle('db:eliminar-solicitud', async (_event, { id }) => {
   if (!supabaseAdmin) return { success: false, error: 'Base de datos no disponible.' };
   try {
+    // Obtener la solicitud antes de eliminarla para saber a quién notificar
+    const { data: solicitud } = await supabaseAdmin
+      .from('solicitudes')
+      .select('usuario_id')
+      .eq('id', id)
+      .single();
+
     const { error } = await supabaseAdmin
       .from('solicitudes')
       .update({ deleted_at: new Date().toISOString() })
       .eq('id', id);
     if (error) return { success: false, error: error.message };
+
+    // Notificar al creador si la solicitud estaba bancarizada
+    if (solicitud) {
+      try {
+        await supabaseAdmin.from('notificaciones').insert({
+          usuario_id: solicitud.usuario_id,
+          tipo: 'eliminado',
+          mensaje: 'Una de tus solicitudes bancarizadas fue eliminada',
+          solicitud_id: id
+        });
+      } catch { /* notificaciones no críticas */ }
+    }
+
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err.message || 'Error al eliminar solicitud' };
@@ -759,6 +825,52 @@ ipcMain.handle('db:obtener-solicitud', async (_event, { id }) => {
     return { success: true, solicitud: data };
   } catch (err: any) {
     return { success: false, error: err.message || 'Error al obtener solicitud' };
+  }
+});
+
+// --- NOTIFICACIONES ---
+ipcMain.handle('db:listar-notificaciones', async (_event, { usuarioId }) => {
+  if (!supabaseAdmin) return { success: false, error: 'Base de datos no disponible.', notificaciones: [] };
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('notificaciones')
+      .select('*')
+      .eq('usuario_id', usuarioId)
+      .order('created_at', { ascending: false })
+      .limit(50);
+    if (error) return { success: false, error: error.message, notificaciones: [] };
+    return { success: true, notificaciones: data || [] };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Error al listar notificaciones', notificaciones: [] };
+  }
+});
+
+ipcMain.handle('db:marcar-notificaciones-leidas', async (_event, { usuarioId }) => {
+  if (!supabaseAdmin) return { success: false, error: 'Base de datos no disponible.' };
+  try {
+    const { error } = await supabaseAdmin
+      .from('notificaciones')
+      .update({ leido: true })
+      .eq('usuario_id', usuarioId)
+      .eq('leido', false);
+    if (error) return { success: false, error: error.message };
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Error al marcar notificaciones' };
+  }
+});
+
+ipcMain.handle('db:eliminar-notificacion', async (_event, { id }) => {
+  if (!supabaseAdmin) return { success: false, error: 'Base de datos no disponible.' };
+  try {
+    const { error } = await supabaseAdmin
+      .from('notificaciones')
+      .delete()
+      .eq('id', id);
+    if (error) return { success: false, error: error.message };
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Error al eliminar notificación' };
   }
 });
 

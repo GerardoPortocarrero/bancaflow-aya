@@ -38,5 +38,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     actualizarSolicitud: (datos: any) => ipcRenderer.invoke('db:actualizar-solicitud', datos),
     eliminarSolicitud: (id: string) => ipcRenderer.invoke('db:eliminar-solicitud', { id }),
     obtenerSolicitud: (id: string) => ipcRenderer.invoke('db:obtener-solicitud', { id }),
+    listarNotificaciones: (usuarioId: string) => ipcRenderer.invoke('db:listar-notificaciones', { usuarioId }),
+    marcarNotificacionesLeidas: (usuarioId: string) => ipcRenderer.invoke('db:marcar-notificaciones-leidas', { usuarioId }),
+    eliminarNotificacion: (id: string) => ipcRenderer.invoke('db:eliminar-notificacion', { id }),
   },
 });
