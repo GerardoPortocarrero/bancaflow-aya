@@ -773,6 +773,26 @@ ipcMain.handle('db:actualizar-solicitud', async (_event, { id, descripcion, prov
       .single();
 
     if (error) return { success: false, error: error.message };
+
+    // Notificar al CFO que una solicitud observada fue reenviada
+    if (supabaseAdmin && data) {
+      try {
+        const { data: cfos } = await supabaseAdmin
+          .from('perfiles')
+          .select('id')
+          .eq('rol', 'CFO');
+        if (cfos && cfos.length > 0) {
+          const notifs = cfos.map((c: any) => ({
+            usuario_id: c.id,
+            tipo: 'nueva_solicitud',
+            mensaje: `Solicitud observada fue reenviada por S/ ${Number(data.monto).toFixed(2)}`,
+            solicitud_id: data.id
+          }));
+          await supabaseAdmin.from('notificaciones').insert(notifs);
+        }
+      } catch { /* notificaciones no críticas */ }
+    }
+
     return { success: true, solicitud: data };
   } catch (err: any) {
     return { success: false, error: err.message || 'Error al actualizar solicitud' };
