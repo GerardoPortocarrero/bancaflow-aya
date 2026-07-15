@@ -15,6 +15,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     testConnection: () => ipcRenderer.invoke('drive:test-connection'),
     uploadFile: (name: string, mimeType: string, base64Data: string) =>
       ipcRenderer.invoke('drive:upload-file', { name, mimeType, base64Data }),
+    deleteFile: (driveId: string) => ipcRenderer.invoke('drive:delete-file', { driveId }),
   },
   db: {
     listarBancos: () => ipcRenderer.invoke('db:listar-bancos'),

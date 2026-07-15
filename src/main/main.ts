@@ -446,6 +446,16 @@ ipcMain.handle('drive:upload-file', async (_event, { name, mimeType, base64Data 
   return await uploadToDrive(buffer, mimeType, name);
 });
 
+ipcMain.handle('drive:delete-file', async (_event, { driveId }) => {
+  if (!drive) return { success: false, error: driveErrorMsg || 'Google Drive no disponible.' };
+  try {
+    await drive.files.delete({ fileId: driveId });
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Error al eliminar archivo de Drive' };
+  }
+});
+
 // --- BANCOS ---
 
 ipcMain.handle('db:listar-bancos', async () => {

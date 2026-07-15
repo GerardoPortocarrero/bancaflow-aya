@@ -20,6 +20,7 @@ interface IElectronAPI {
   drive: {
     testConnection: () => Promise<{ success: boolean; folder?: { id: string; name: string }; error?: string }>;
     uploadFile: (name: string, mimeType: string, base64Data: string) => Promise<{ success: boolean; file?: any; error?: string }>;
+    deleteFile: (driveId: string) => Promise<{ success: boolean; error?: string }>;
   };
   db: {
     listarBancos: () => Promise<{ success: boolean; bancos?: any[]; error?: string }>;
@@ -68,6 +69,8 @@ let proveedorMap = new Map<string, any>();
 let perfilMap = new Map<string, any>();
 let notificaciones: any[] = [];
 let notifDropdownAbierto = false;
+let archivosExistentes: ArchivoSubido[] = [];
+let archivosAEliminar: string[] = [];
 
 // --- DOM REFS ---
 const loginScreen = document.getElementById('login-screen');
@@ -479,6 +482,8 @@ async function cargarMisSolicitudes() {
 async function abrirModalSolicitud(solicitudId: string | null = null) {
   editingSolicitudId = solicitudId;
   solicitudFiles.length = 0;
+  archivosExistentes = [];
+  archivosAEliminar = [];
   const titleEl = document.getElementById('modal-solicitud-title');
   const btnSubmit = document.getElementById('btn-submit-solicitud');
   if (titleEl) titleEl.textContent = solicitudId ? 'Editar Solicitud' : 'Nueva Solicitud';
@@ -500,11 +505,60 @@ async function abrirModalSolicitud(solicitudId: string | null = null) {
         (document.getElementById('input-monto') as HTMLInputElement).value = sol.monto;
         (document.getElementById('input-descripcion') as HTMLTextAreaElement).value = sol.descripcion;
         if (sol.monto > 700) document.getElementById('alert-detraccion')?.classList.remove('hidden');
+        archivosExistentes = (sol.archivos && Array.isArray(sol.archivos)) ? sol.archivos : [];
+        renderArchivosEditables();
       }
     }
   }
 
   openModal('modal-solicitud');
+}
+
+function renderArchivosEditables() {
+  const container = document.getElementById('file-list-solicitud');
+  if (!container) return;
+  const items: string[] = [];
+  archivosExistentes.forEach((a, i) => {
+    items.push(`
+      <div class="flex items-center justify-between bg-emerald-500/10 p-2 rounded-lg">
+        <div class="flex items-center gap-2 min-w-0">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0"></span>
+          <span class="text-xs text-slate-300 truncate">${a.name}</span>
+          <span class="text-[10px] text-emerald-400 font-semibold shrink-0">Subido</span>
+        </div>
+        <button type="button" class="btn-del-existente p-1 rounded bg-red-500/15 text-red-400 hover:bg-red-500/25 transition-colors ml-2 shrink-0" data-index="${i}" title="Eliminar de Drive"><i data-lucide="x" class="w-3 h-3"></i></button>
+      </div>
+    `);
+  });
+  solicitudFiles.forEach((f, i) => {
+    items.push(`
+      <div class="flex items-center justify-between bg-white/5 p-2 rounded-lg">
+        <span class="text-xs text-slate-300 truncate">${f.name} <span class="text-[10px] text-amber-400">(pendiente)</span></span>
+        <button type="button" class="btn-remove-file p-1 rounded bg-red-500/15 text-red-400 hover:bg-red-500/25 transition-colors ml-2 shrink-0" data-index="${i}" title="Eliminar"><i data-lucide="x" class="w-3 h-3"></i></button>
+      </div>
+    `);
+  });
+  container.innerHTML = items.join('');
+  createIcons();
+
+  container.querySelectorAll('.btn-del-existente').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const idx = parseInt(btn.getAttribute('data-index') || '0');
+      const removed = archivosExistentes.splice(idx, 1);
+      if (removed[0]?.driveId) {
+        archivosAEliminar.push(removed[0].driveId);
+      }
+      renderArchivosEditables();
+    });
+  });
+
+  container.querySelectorAll('.btn-remove-file').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.getAttribute('data-index') || '0');
+      solicitudFiles.splice(idx, 1);
+      renderArchivosEditables();
+    });
+  });
 }
 
 async function submitSolicitud(e: Event) {
@@ -525,8 +579,17 @@ async function submitSolicitud(e: Event) {
   btn.textContent = 'Procesando...';
 
   try {
-    const archivosSubidos: ArchivoSubido[] = [];
+    // Eliminar de Drive los archivos marcados para borrar
+    if (archivosAEliminar.length > 0) {
+      if (progressText) progressText.textContent = 'Eliminando archivos de Drive...';
+      progressDiv?.classList.remove('hidden');
+      for (const driveId of archivosAEliminar) {
+        await window.electronAPI.drive.deleteFile(driveId);
+      }
+    }
 
+    // Subir archivos nuevos
+    const archivosSubidos: ArchivoSubido[] = [];
     if (solicitudFiles.length > 0) {
       progressDiv?.classList.remove('hidden');
       for (let i = 0; i < solicitudFiles.length; i++) {
@@ -555,12 +618,13 @@ async function submitSolicitud(e: Event) {
     if (progressText) progressText.textContent = 'Guardando...';
 
     if (editingSolicitudId) {
+      const archivosFinales = [...archivosExistentes, ...archivosSubidos];
       const res = await window.electronAPI.db.actualizarSolicitud({
         id: editingSolicitudId,
         descripcion,
         proveedorId,
         monto,
-        archivos: archivosSubidos.length > 0 ? archivosSubidos : undefined
+        archivos: archivosFinales
       });
       if (!res.success) throw new Error(res.error || 'Error al actualizar');
     } else {
@@ -575,6 +639,8 @@ async function submitSolicitud(e: Event) {
     }
 
     closeModal('modal-solicitud');
+    archivosExistentes = [];
+    archivosAEliminar = [];
     await Promise.all([cargarMisSolicitudes(), cargarDashboard(), cargarBancarizados()]);
   } catch (err: any) {
     if (errorText) errorText.textContent = err.message;
@@ -1126,6 +1192,8 @@ function resetAllForms() {
   solicitudFiles.length = 0;
   bancarizarFiles.length = 0;
   editingSolicitudId = null;
+  archivosExistentes = [];
+  archivosAEliminar = [];
 }
 
 // --- NAVEGACIÓN SPA ---
