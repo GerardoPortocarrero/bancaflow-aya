@@ -1475,7 +1475,15 @@ function setupDropzones() {
 }
 
 // --- INIT ---
+function setupSidebar() {
+  const s = document.getElementById('sidebar');
+  if (!s) return;
+  s.addEventListener('mouseenter', () => s.classList.add('expanded'));
+  s.addEventListener('mouseleave', () => s.classList.remove('expanded'));
+}
+
 function init() {
+  setupSidebar();
   setupNavigation();
   setupEventListeners();
   setupTableSearches();

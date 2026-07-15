@@ -55,7 +55,7 @@
     <!-- APP CONTAINER -->
     <div id="app-container" class="hidden flex h-screen bg-transparent animate-in fade-in zoom-in-95 duration-500">
         <!-- Sidebar -->
-        <aside id="sidebar" class="w-64 flex flex-col drag-region overflow-hidden">
+        <aside id="sidebar" class="fixed left-0 top-0 h-full z-40 flex flex-col drag-region">
             <div class="flex items-center h-14 px-4 shrink-0 gap-3 drag-region">
                 <div class="w-8 h-8 bg-white/10 rounded-lg p-1 border border-white/10 backdrop-blur-md shrink-0 no-drag">
                     <img src="../../assets/logo.png" alt="Logo" class="w-full h-full object-contain">
@@ -116,7 +116,7 @@
         </aside>
 
         <!-- Main Content -->
-        <main class="flex-1 flex flex-col bg-transparent min-w-0">
+        <main class="flex-1 flex flex-col bg-transparent min-w-0 ml-14">
             <!-- Header -->
             <header
                 class="h-[40px] min-h-[40px] flex items-center justify-between pl-8 pr-[150px] border-b border-fluent-border bg-black/10 backdrop-blur-xl drag-region">
