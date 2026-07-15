@@ -35,6 +35,14 @@
     border-right: 1px solid rgba(255, 255, 255, 0.06);
     box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.02);
   }
+
+  #sidebar {
+    background: rgba(16, 16, 20, 0.55);
+    backdrop-filter: blur(40px);
+    -webkit-backdrop-filter: blur(40px);
+    border-right: 1px solid rgba(255, 255, 255, 0.07);
+    box-shadow: inset 1px 0 0 rgba(255, 255, 255, 0.03), 2px 0 32px rgba(0, 0, 0, 0.2);
+  }
   
   .glass-panel {
     background: rgba(22, 22, 22, 0.65);
@@ -82,17 +90,17 @@
   }
 
   .nav-link {
-    @apply flex items-center px-4 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer;
+    @apply flex items-center px-3 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer;
   }
 
   .nav-link-active {
-    background: rgba(255, 255, 255, 0.08);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.1);
-    @apply text-fluent-accent border border-white/10;
+    background: rgba(96, 205, 255, 0.07);
+    @apply text-fluent-accent;
+    box-shadow: inset 3px 0 0 rgba(96, 205, 255, 0.35);
   }
 
   .nav-link-inactive {
-    @apply text-slate-300 hover:bg-white/5 hover:text-white;
+    @apply text-slate-400 hover:bg-white/5 hover:text-white;
   }
 
   /* Fluent Controls - Dark Glassmorphism Premium */
