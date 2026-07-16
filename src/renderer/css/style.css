@@ -133,6 +133,20 @@
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
   }
 
+  select.fluent-input {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='rgba(255,255,255,0.5)' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 10px;
+    padding-right: 36px;
+  }
+
+  select.fluent-input option {
+    background: #1a1a1e;
+    color: #fff;
+  }
+
   .fluent-label {
     @apply text-[11px] font-bold text-slate-300 uppercase tracking-wider px-1 block;
   }

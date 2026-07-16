@@ -36,7 +36,7 @@
                         <input type="password" id="login-password" required class="fluent-input" placeholder="••••••••">
                     </div>
                     <div id="login-error"
-                        class="hidden text-[11px] font-bold text-red-400 bg-red-950/40 p-3 rounded-lg border border-red-900/50 animate-in slide-in-from-top-2">
+                        class="hidden bg-red-500/10 border border-red-500/20 border-l-4 border-l-red-500 p-3 rounded-lg text-xs leading-relaxed text-red-200 font-semibold">
                     </div>
                     <button type="submit" id="login-btn"
                         class="w-full py-3.5 bg-fluent-accent hover:bg-[#80d8ff] text-slate-950 rounded-xl text-sm font-black uppercase tracking-widest shadow-xl shadow-fluent-accent/10 transition-all transform active:scale-[0.97] flex items-center justify-center cursor-pointer mt-4">
@@ -145,7 +145,7 @@
             <section id="view-dashboard" class="flex-1 overflow-y-auto animate-in fade-in duration-500 mica-section">
                 <div class="p-8">
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
-                    <div class="fluent-card p-5 flex items-center gap-4">
+                    <div class="fluent-card p-5 flex items-center gap-4 border-l-4 border-l-amber-400">
                         <div class="w-10 h-10 rounded-xl bg-amber-400/10 border border-amber-400/20 flex items-center justify-center shrink-0">
                             <i data-lucide="clock" class="w-5 h-5 text-amber-400"></i>
                         </div>
@@ -163,7 +163,7 @@
                             <h3 class="text-2xl font-extrabold text-fluent-accent mt-0.5" id="dashboard-por-bancarizar">0</h3>
                         </div>
                     </div>
-                    <div class="fluent-card p-5 flex items-center gap-4">
+                    <div class="fluent-card p-5 flex items-center gap-4 border-l-4 border-l-emerald-400">
                         <div class="w-10 h-10 rounded-xl bg-emerald-400/10 border border-emerald-400/20 flex items-center justify-center shrink-0">
                             <i data-lucide="circle-check" class="w-5 h-5 text-emerald-400"></i>
                         </div>
@@ -177,7 +177,7 @@
                     <div class="px-8 py-4 border-b border-fluent-border bg-black/10 flex justify-between items-center">
                         <h3 class="text-sm font-bold text-slate-200">Solicitudes Recientes</h3>
                     </div>
-                    <div class="p-12 text-center" id="dashboard-recientes-placeholder">
+                    <div class="p-12 text-center" id="dashboard-recientes-empty">
                         <div
                             class="bg-white/5 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 border border-white/10">
                             <i data-lucide="layout-dashboard" class="w-8 h-8 text-slate-400"></i>
@@ -423,7 +423,7 @@
                 <div class="grid grid-cols-2 gap-4">
                     <div class="space-y-1">
                         <label class="fluent-label">Proveedor</label>
-                        <select id="input-proveedor" class="fluent-input bg-black/20 appearance-none" required>
+                        <select id="input-proveedor" class="fluent-input" required>
                             <option value="" disabled selected>Seleccione...</option>
                         </select>
                     </div>
@@ -493,7 +493,7 @@
                 <div class="grid grid-cols-2 gap-4">
                     <div class="space-y-1">
                         <label class="fluent-label">Banco (opcional)</label>
-                        <select id="prov-banco-id" class="fluent-input bg-black/20 appearance-none">
+                        <select id="prov-banco-id" class="fluent-input">
                             <option value="">Seleccione...</option>
                         </select>
                     </div>
@@ -505,7 +505,7 @@
                 <div class="grid grid-cols-2 gap-4">
                     <div class="space-y-1">
                         <label class="fluent-label">Sede (opcional)</label>
-                        <select id="prov-sede-id" class="fluent-input bg-black/20 appearance-none">
+                        <select id="prov-sede-id" class="fluent-input">
                             <option value="">Seleccione...</option>
                         </select>
                     </div>
@@ -534,7 +534,7 @@
                 </div>
                 <div class="space-y-1">
                     <label class="fluent-label">Moneda</label>
-                    <select id="banco-moneda" class="fluent-input bg-black/20 appearance-none" required>
+                    <select id="banco-moneda" class="fluent-input" required>
                         <option value="Soles">Soles</option>
                         <option value="Dolares">Dólares</option>
                     </select>
@@ -591,7 +591,7 @@
                 </div>
                 <div class="space-y-1">
                     <label class="fluent-label">Rol</label>
-                    <select id="usr-rol" class="fluent-input bg-black/20 appearance-none" required>
+                    <select id="usr-rol" class="fluent-input" required>
                         <option value="RRHH">RRHH</option>
                         <option value="CONTADOR">Contador</option>
                         <option value="CFO">CFO</option>
