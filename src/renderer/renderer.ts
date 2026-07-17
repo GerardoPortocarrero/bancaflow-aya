@@ -953,10 +953,11 @@ async function cargarServiciosSelect(res?: any) {
 }
 
 async function cargarServicios() {
-  skeletonRows('table-body-servicios', 3);
+  skeletonRows('table-body-servicios', 4);
   const res = await window.electronAPI.db.listarServicios();
   servicioMap = new Map();
   if (res.success) (res.servicios || []).forEach((s: any) => servicioMap.set(s.id, s));
+  else toast('Error al cargar servicios: ' + (res.error || 'desconocido'), 'error');
   await cargarServiciosSelect(res);
   const tbody = document.getElementById('table-body-servicios');
   if (tbody && res.success) {

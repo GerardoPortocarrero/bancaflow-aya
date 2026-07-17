@@ -437,6 +437,16 @@ ipcMain.handle('drive:test-connection', async () => {
       folder: { id: response.data.id, name: response.data.name }
     };
   } catch (err: any) {
+    if (err.message?.includes('invalid_grant')) {
+      const tokenPath = path.join(app.getPath('userData'), 'drive_tokens.json');
+      try { fs.unlinkSync(tokenPath); } catch { /* ignore */ }
+      drive = null;
+      driveErrorMsg = 'Token expirado';
+      if (googleClientId && googleClientSecret && googleFolderId) {
+        await initDrive(true);
+        if (drive) return { success: true, folder: { id: '', name: 'Conectado' } };
+      }
+    }
     return { success: false, error: err.message || 'Error de conexión con Google Drive' };
   }
 });
@@ -615,7 +625,6 @@ ipcMain.handle('db:listar-servicios', async () => {
     const { data, error } = await supabaseAdmin
       .from('servicios')
       .select('*')
-      .is('deleted_at', null)
       .order('nombre', { ascending: true });
     if (error) return { success: false, error: error.message };
     return { success: true, servicios: data };
