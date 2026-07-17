@@ -608,6 +608,67 @@ ipcMain.handle('db:eliminar-proveedor', async (_event, { id }) => {
   }
 });
 
+// --- SERVICIOS ---
+ipcMain.handle('db:listar-servicios', async () => {
+  if (!supabaseAdmin) return { success: false, error: 'Base de datos no configurada.' };
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('servicios')
+      .select('*')
+      .is('deleted_at', null)
+      .order('nombre', { ascending: true });
+    if (error) return { success: false, error: error.message };
+    return { success: true, servicios: data };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Error al listar servicios' };
+  }
+});
+
+ipcMain.handle('db:crear-servicio', async (_event, datos) => {
+  if (!supabaseAdmin) return { success: false, error: 'Falta SUPABASE_SERVICE_KEY en .env para esta acción.' };
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('servicios')
+      .insert({ nombre: datos.nombre, detrae: datos.detrae ?? false, detraccion: datos.detraccion || 0 })
+      .select()
+      .single();
+    if (error) return { success: false, error: error.message };
+    return { success: true, servicio: data };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Error al crear servicio' };
+  }
+});
+
+ipcMain.handle('db:actualizar-servicio', async (_event, { id, ...datos }) => {
+  if (!supabaseAdmin) return { success: false, error: 'Falta SUPABASE_SERVICE_KEY en .env para esta acción.' };
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('servicios')
+      .update({ nombre: datos.nombre, detrae: datos.detrae ?? false, detraccion: datos.detraccion })
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) return { success: false, error: error.message };
+    return { success: true, servicio: data };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Error al actualizar servicio' };
+  }
+});
+
+ipcMain.handle('db:eliminar-servicio', async (_event, { id }) => {
+  if (!supabaseAdmin) return { success: false, error: 'Falta SUPABASE_SERVICE_KEY en .env para esta acción.' };
+  try {
+    const { error } = await supabaseAdmin
+      .from('servicios')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', id);
+    if (error) return { success: false, error: error.message };
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Error al eliminar servicio' };
+  }
+});
+
 ipcMain.handle('db:listar-perfiles', async () => {
   if (!supabaseAdmin) return { success: false, error: 'Base de datos no configurada.' };
   try {
@@ -632,6 +693,7 @@ ipcMain.handle('db:crear-solicitud', async (_event, datos) => {
       .insert({
         usuario_id: userId,
         proveedor_id: datos.proveedorId,
+        servicio_id: datos.servicioId || null,
         descripcion: datos.descripcion,
         monto: datos.monto,
         requiere_detraccion: datos.requiereDetraccion || false,
@@ -766,13 +828,15 @@ ipcMain.handle('db:bancarizar-solicitud', async (_event, { id, evidencias }) => 
   }
 });
 
-ipcMain.handle('db:actualizar-solicitud', async (_event, { id, descripcion, proveedorId, monto, archivos }) => {
+ipcMain.handle('db:actualizar-solicitud', async (_event, { id, descripcion, proveedorId, servicioId, monto, requiereDetraccion, archivos }) => {
   if (!supabaseAdmin) return { success: false, error: 'Base de datos no disponible.' };
   try {
     const updateData: any = { estado: 'PENDIENTE', observacion_motivo: null };
     if (descripcion !== undefined) updateData.descripcion = descripcion;
     if (proveedorId !== undefined) updateData.proveedor_id = proveedorId;
+    if (servicioId !== undefined) updateData.servicio_id = servicioId;
     if (monto !== undefined) updateData.monto = monto;
+    if (requiereDetraccion !== undefined) updateData.requiere_detraccion = requiereDetraccion;
     if (archivos !== undefined) updateData.archivos = archivos;
 
     const { data, error } = await supabaseAdmin

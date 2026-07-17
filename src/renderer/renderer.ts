@@ -1,5 +1,5 @@
 declare const lucide: any;
-const { createIcons, LayoutDashboard, FilePlus, History: HistoryIcon, Bell, Settings, LogOut, Inbox, Users, Shield, Landmark, Building, CircleCheck, Pencil, Trash2, XCircle, Banknote, Eye } = lucide;
+const { createIcons, LayoutDashboard, FilePlus, History: HistoryIcon, Bell, Settings, LogOut, Inbox, Users, Shield, Landmark, Building, Briefcase, CircleCheck, Pencil, Trash2, XCircle, Banknote, Eye } = lucide;
 
 interface ArchivoSubido {
   name: string;
@@ -28,6 +28,10 @@ interface IElectronAPI {
     listarSedes: () => Promise<{ success: boolean; sedes?: any[]; error?: string }>;
     crearSede: (nombre: string) => Promise<{ success: boolean; sede?: any; error?: string }>;
     listarProveedores: () => Promise<{ success: boolean; proveedores?: any[]; error?: string }>;
+    listarServicios: () => Promise<{ success: boolean; servicios?: any[]; error?: string }>;
+    crearServicio: (datos: any) => Promise<{ success: boolean; servicio?: any; error?: string }>;
+    actualizarServicio: (id: string, datos: any) => Promise<{ success: boolean; servicio?: any; error?: string }>;
+    eliminarServicio: (id: string) => Promise<{ success: boolean; error?: string }>;
     crearProveedor: (datos: any) => Promise<{ success: boolean; proveedor?: any; error?: string }>;
     crearSolicitud: (datos: any) => Promise<{ success: boolean; solicitud?: any; error?: string }>;
     listarSolicitudes: (vista: string, rol: string) => Promise<{ success: boolean; solicitudes?: any[]; error?: string }>;
@@ -55,7 +59,7 @@ interface Window { electronAPI: IElectronAPI; }
 
 function initIcons() {
   createIcons({
-    icons: { LayoutDashboard, FilePlus, History: HistoryIcon, Bell, Settings, LogOut, Inbox, Users, Shield, Landmark, Building, CircleCheck }
+    icons: { LayoutDashboard, FilePlus, History: HistoryIcon, Bell, Settings, LogOut, Inbox, Users, Shield, Landmark, Building, Briefcase, CircleCheck }
   });
 }
 initIcons();
@@ -66,6 +70,7 @@ let editingSolicitudId: string | null = null;
 let solicitudFiles: File[] = [];
 let bancarizarFiles: File[] = [];
 let proveedorMap = new Map<string, any>();
+let servicioMap = new Map<string, any>();
 let perfilMap = new Map<string, any>();
 let notificaciones: any[] = [];
 let notifDropdownAbierto = false;
@@ -97,7 +102,7 @@ async function verificarSesion() {
 function aplicarFiltroDeRoles(rol: string) {
   const navItems = [
     'nav-mis-solicitudes', 'nav-cfo-bandeja', 'nav-bancarizados',
-    'nav-proveedores', 'nav-bancos', 'nav-sedes', 'nav-usuarios'
+    'nav-proveedores', 'nav-bancos', 'nav-servicios', 'nav-sedes', 'nav-usuarios'
   ];
   navItems.forEach(id => {
     const el = document.getElementById(id);
@@ -108,13 +113,19 @@ function aplicarFiltroDeRoles(rol: string) {
     setVis('nav-cfo-bandeja', true);
     setVis('nav-bancarizados', true);
     setVis('nav-proveedores', true);
+    setVis('nav-servicios', true);
   } else if (rol === 'ADMINISTRADOR') {
     setVis('nav-mis-solicitudes', true);
     setVis('nav-bancarizados', true);
     setVis('nav-proveedores', true);
     setVis('nav-bancos', true);
+    setVis('nav-servicios', true);
     setVis('nav-sedes', true);
     setVis('nav-usuarios', true);
+  } else if (rol === 'CONTADOR') {
+    setVis('nav-mis-solicitudes', true);
+    setVis('nav-bancarizados', true);
+    setVis('nav-servicios', true);
   } else {
     setVis('nav-mis-solicitudes', true);
     setVis('nav-bancarizados', true);
@@ -359,6 +370,7 @@ function toggleNotifDropdown() {
 async function cargarDatosIniciales() {
   await Promise.all([
     cargarProveedores(),
+    cargarServicios(),
     cargarBancos(),
     cargarSedes(),
     cargarNotificaciones(),
@@ -410,6 +422,7 @@ async function cargarDashboard() {
           'bg-amber-400/10 text-amber-400 border-amber-400/20';
         return `<tr class="hover:bg-white/5 transition-colors">
           <td class="px-8 py-4 text-xs">${new Date(s.created_at).toLocaleDateString()}</td>
+          <td class="px-8 py-4 text-sm text-slate-200">${(servicioMap.get(s.servicio_id)?.nombre) || '-'}</td>
           <td class="px-8 py-4 text-sm font-bold text-white">${(proveedorMap.get(s.proveedor_id)?.nombre_razon_social) || '-'}</td>
           <td class="px-8 py-4 text-sm font-bold text-emerald-400">S/ ${Number(s.monto).toFixed(2)}</td>
           <td class="px-8 py-4"><span class="px-2 py-1 rounded text-[10px] font-bold tracking-wider ${badgeClass}">${s.estado}</span></td>
@@ -434,18 +447,19 @@ function setText(id: string, text: string) {
 
 // --- MIS SOLICITUDES ---
 async function cargarMisSolicitudes() {
-  skeletonRows('table-body-mis-solicitudes', 6);
+  skeletonRows('table-body-mis-solicitudes', 7);
   const res = await window.electronAPI.db.listarSolicitudes('mis-solicitudes', currentUser?.rol || '');
   const tbody = document.getElementById('table-body-mis-solicitudes');
   if (!tbody) return;
   const solicitudes = res.success && Array.isArray(res.solicitudes) ? res.solicitudes : [];
   if (solicitudes.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="6" class="text-center p-8 text-slate-500">No tienes solicitudes pendientes.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" class="text-center p-8 text-slate-500">No tienes solicitudes pendientes.</td></tr>`;
     return;
   }
   tbody.innerHTML = solicitudes.map((s: any) => `
     <tr class="hover:bg-white/5 transition-colors">
       <td class="px-8 py-4">${new Date(s.created_at).toLocaleDateString()}</td>
+      <td class="px-8 py-4 text-slate-200">${(servicioMap.get(s.servicio_id)?.nombre) || '-'}</td>
       <td class="px-8 py-4 font-bold text-white">${(proveedorMap.get(s.proveedor_id)?.nombre_razon_social) || '-'}</td>
       <td class="px-8 py-4 font-bold text-emerald-400">S/ ${Number(s.monto).toFixed(2)}</td>
       <td class="px-8 py-4">
@@ -501,10 +515,15 @@ async function abrirModalSolicitud(solicitudId: string | null = null) {
     if (res.success && Array.isArray(res.solicitudes)) {
       const sol = res.solicitudes.find((s: any) => s.id === solicitudId);
       if (sol) {
+        (document.getElementById('input-servicio') as HTMLSelectElement).value = sol.servicio_id || '';
         (document.getElementById('input-proveedor') as HTMLSelectElement).value = sol.proveedor_id;
         (document.getElementById('input-monto') as HTMLInputElement).value = sol.monto;
         (document.getElementById('input-descripcion') as HTMLTextAreaElement).value = sol.descripcion;
-        if (sol.monto > 700) document.getElementById('alert-detraccion')?.classList.remove('hidden');
+        const serv = servicioMap.get(sol.servicio_id);
+        if (serv?.detrae && sol.monto > serv.detraccion) {
+          document.getElementById('alert-detraccion-text')!.textContent = `Monto supera el umbral de S/ ${Number(serv.detraccion).toLocaleString()}. Se requiere sustento de depósito.`;
+          document.getElementById('alert-detraccion')?.classList.remove('hidden');
+        }
         archivosExistentes = (sol.archivos && Array.isArray(sol.archivos)) ? sol.archivos : [];
         renderArchivosEditables();
       }
@@ -563,6 +582,7 @@ function renderArchivosEditables() {
 
 async function submitSolicitud(e: Event) {
   e.preventDefault();
+  const servicioId = (document.getElementById('input-servicio') as HTMLSelectElement).value;
   const proveedorId = (document.getElementById('input-proveedor') as HTMLSelectElement).value;
   const monto = parseFloat((document.getElementById('input-monto') as HTMLInputElement).value);
   const descripcion = (document.getElementById('input-descripcion') as HTMLTextAreaElement).value.trim();
@@ -573,7 +593,7 @@ async function submitSolicitud(e: Event) {
   const progressText = document.getElementById('progress-text-solicitud');
   const btn = document.getElementById('btn-submit-solicitud') as HTMLButtonElement;
 
-  if (!proveedorId || !monto || !descripcion) { toast('Completa todos los campos obligatorios', 'error'); return; }
+  if (!servicioId || !proveedorId || !monto || !descripcion) { toast('Completa todos los campos obligatorios', 'error'); return; }
   errorDiv?.classList.add('hidden');
   btn.disabled = true;
   btn.textContent = 'Procesando...';
@@ -617,22 +637,28 @@ async function submitSolicitud(e: Event) {
 
     if (progressText) progressText.textContent = 'Guardando...';
 
+    const serv = servicioMap.get(servicioId);
+    const requiereDetraccion = serv?.detrae ? monto > serv.detraccion : false;
+
     if (editingSolicitudId) {
       const archivosFinales = [...archivosExistentes, ...archivosSubidos];
       const res = await window.electronAPI.db.actualizarSolicitud({
         id: editingSolicitudId,
         descripcion,
         proveedorId,
+        servicioId,
         monto,
+        requiereDetraccion,
         archivos: archivosFinales
       });
       if (!res.success) throw new Error(res.error || 'Error al actualizar');
     } else {
       const res = await window.electronAPI.db.crearSolicitud({
         proveedorId,
+        servicioId,
         descripcion,
         monto,
-        requiereDetraccion: monto > 700,
+        requiereDetraccion,
         archivos: archivosSubidos
       });
       if (!res.success) throw new Error(res.error || 'Error al crear');
@@ -655,18 +681,19 @@ async function submitSolicitud(e: Event) {
 // --- BANDEJA CFO ---
 async function cargarBandejaCFO() {
   if (currentUser?.rol !== 'CFO') return;
-  skeletonRows('table-body-cfo-bandeja', 6);
+  skeletonRows('table-body-cfo-bandeja', 8);
   const res = await window.electronAPI.db.listarSolicitudes('cfo-bandeja', 'CFO');
   const tbody = document.getElementById('table-body-cfo-bandeja');
   const solicitudes = res.success && Array.isArray(res.solicitudes) ? res.solicitudes : [];
   if (!tbody) return;
   if (solicitudes.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7" class="text-center p-8 text-slate-500">No hay solicitudes pendientes.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8" class="text-center p-8 text-slate-500">No hay solicitudes pendientes.</td></tr>`;
     return;
   }
   tbody.innerHTML = solicitudes.map((s: any) => `
     <tr class="hover:bg-white/5 transition-colors">
       <td class="px-8 py-4">${new Date(s.created_at).toLocaleDateString()}</td>
+      <td class="px-8 py-4 text-slate-200">${(servicioMap.get(s.servicio_id)?.nombre) || '-'}</td>
       <td class="px-8 py-4 font-bold text-white">${(perfilMap.get(s.usuario_id)?.nombre) || 'N/A'} ${(perfilMap.get(s.usuario_id)?.apellido) || ''}</td>
       <td class="px-8 py-4">${(proveedorMap.get(s.proveedor_id)?.nombre_razon_social) || '-'}</td>
       <td class="px-8 py-4 font-bold text-emerald-400">S/ ${Number(s.monto).toFixed(2)}</td>
@@ -751,6 +778,7 @@ async function abrirModalDetalle(id: string) {
 
   setText('detalle-fecha', new Date(s.created_at).toLocaleDateString('es-PE', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }));
   setText('detalle-solicitante', perfil ? `${perfil.nombre} ${perfil.apellido}` : '—');
+  setText('detalle-servicio', (servicioMap.get(s.servicio_id)?.nombre) || '—');
   setText('detalle-proveedor', prov ? prov.nombre_razon_social : '—');
   setText('detalle-monto', `S/ ${Number(s.monto).toFixed(2)}`);
   setText('detalle-descripcion', s.descripcion || '—');
@@ -849,19 +877,20 @@ async function submitBancarizar(e: Event) {
 // --- BANCARIZADOS ---
 async function cargarBancarizados() {
   const rol = currentUser?.rol || '';
-  skeletonRows('table-body-bancarizados', 7);
+  skeletonRows('table-body-bancarizados', 8);
   const res = await window.electronAPI.db.listarSolicitudes('bancarizados', rol);
   const tbody = document.getElementById('table-body-bancarizados');
   const solicitudes = res.success && Array.isArray(res.solicitudes) ? res.solicitudes : [];
   const esCFO = rol === 'CFO';
   if (!tbody) return;
   if (solicitudes.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7" class="text-center p-8 text-slate-500">No hay solicitudes bancarizadas.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8" class="text-center p-8 text-slate-500">No hay solicitudes bancarizadas.</td></tr>`;
     return;
   }
   tbody.innerHTML = solicitudes.map((s: any) => `
     <tr class="hover:bg-white/5 transition-colors">
       <td class="px-8 py-4">${new Date(s.updated_at).toLocaleDateString()}</td>
+      <td class="px-8 py-4 text-slate-200">${(servicioMap.get(s.servicio_id)?.nombre) || '-'}</td>
       <td class="px-8 py-4 font-bold text-white">${(perfilMap.get(s.usuario_id)?.nombre) || 'N/A'} ${(perfilMap.get(s.usuario_id)?.apellido) || ''}</td>
       <td class="px-8 py-4">${(proveedorMap.get(s.proveedor_id)?.nombre_razon_social) || '-'}</td>
       <td class="px-8 py-4 font-bold text-emerald-400">S/ ${Number(s.monto).toFixed(2)}</td>
@@ -909,6 +938,63 @@ async function cargarProveedoresSelect(res?: any) {
   if (select && res.success) {
     select.innerHTML = '<option value="" disabled selected>Seleccione un proveedor...</option>' +
       (res.proveedores || []).map((p: any) => `<option value="${p.id}">${p.nombre_razon_social}</option>`).join('');
+  }
+}
+
+async function cargarServiciosSelect(res?: any) {
+  if (!res) res = await window.electronAPI.db.listarServicios();
+  const select = document.getElementById('input-servicio') as HTMLSelectElement;
+  if (select && res.success) {
+    select.innerHTML = '<option value="" disabled selected>Seleccione un servicio...</option>' +
+      (res.servicios || []).map((s: any) =>
+        `<option value="${s.id}">${s.nombre}${s.detrae ? ` (S/ ${Number(s.detraccion).toLocaleString()})` : ' (Sin detracción)'}</option>`
+      ).join('');
+  }
+}
+
+async function cargarServicios() {
+  skeletonRows('table-body-servicios', 3);
+  const res = await window.electronAPI.db.listarServicios();
+  servicioMap = new Map();
+  if (res.success) (res.servicios || []).forEach((s: any) => servicioMap.set(s.id, s));
+  await cargarServiciosSelect(res);
+  const tbody = document.getElementById('table-body-servicios');
+  if (tbody && res.success) {
+    tbody.innerHTML = (res.servicios || []).map((s: any) =>
+      `<tr class="hover:bg-white/5 transition-colors">
+        <td class="px-8 py-4 font-bold text-white">${s.nombre}</td>
+        <td class="px-8 py-4"><span class="px-2 py-0.5 rounded text-[10px] font-bold tracking-wider ${s.detrae ? 'bg-amber-400/10 text-amber-400 border border-amber-400/20' : 'bg-white/5 text-slate-400 border border-white/10'}">${s.detrae ? 'Sí' : 'No'}</span></td>
+        <td class="px-8 py-4">${s.detrae ? `<span class="font-bold text-amber-400">S/ ${Number(s.detraccion).toLocaleString()}</span>` : '<span class="text-slate-500">—</span>'}</td>
+        <td class="px-8 py-4 text-right space-x-2">
+          <button class="btn-editar-servicio p-1.5 rounded-lg bg-fluent-accent/15 text-fluent-accent hover:bg-fluent-accent/25 transition-colors" data-id="${s.id}" title="Editar"><i data-lucide="pencil" class="w-3.5 h-3.5"></i></button>
+          <button class="btn-eliminar-servicio p-1.5 rounded-lg bg-red-500/15 text-red-400 hover:bg-red-500/25 transition-colors" data-id="${s.id}" title="Eliminar"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+        </td>
+      </tr>`
+    ).join('');
+    createIcons();
+    tbody.querySelectorAll('.btn-editar-servicio').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-id');
+        const s = (res.servicios || []).find((x: any) => x.id === id);
+        if (!s) return;
+        (document.getElementById('serv-nombre') as HTMLInputElement).value = s.nombre || '';
+        (document.getElementById('serv-detrae') as HTMLInputElement).checked = s.detrae ?? false;
+        const fields = document.getElementById('serv-detracion-fields');
+        if (fields) fields.style.opacity = s.detrae ? '1' : '0.3';
+        (document.getElementById('serv-detraccion') as HTMLInputElement).value = s.detraccion || '';
+        (document.getElementById('form-servicio') as HTMLFormElement).setAttribute('data-editing', id || '');
+        openModal('modal-servicio');
+      });
+    });
+    tbody.querySelectorAll('.btn-eliminar-servicio').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = btn.getAttribute('data-id');
+        if (!id) return;
+        if (!await confirmDialog('¿Eliminar este servicio?')) return;
+        const r = await window.electronAPI.db.eliminarServicio(id);
+        if (r.success) { toast('Servicio eliminado', 'success'); await cargarServicios(); } else { toast('Error: ' + r.error, 'error'); }
+      });
+    });
   }
 }
 
@@ -1247,6 +1333,8 @@ function setupNavigation() {
         await cargarProveedores();
       } else if (targetId === 'view-bancos') {
         await cargarBancos();
+      } else if (targetId === 'view-servicios') {
+        await cargarServicios();
       } else if (targetId === 'view-sedes') {
         await cargarSedes();
       } else if (targetId === 'view-usuarios' && currentUser?.rol === 'ADMINISTRADOR') {
@@ -1316,14 +1404,24 @@ function setupEventListeners() {
     }
   });
 
-  // Monto → detracción
-  document.getElementById('input-monto')?.addEventListener('input', () => {
+  // Monto + Servicio → detracción dinámica
+  const actualizarDetraccion = () => {
     const monto = parseFloat((document.getElementById('input-monto') as HTMLInputElement).value);
+    const servId = (document.getElementById('input-servicio') as HTMLSelectElement).value;
+    const serv = servicioMap.get(servId);
     const alert = document.getElementById('alert-detraccion');
-    if (alert) {
-      if (monto > 700) alert.classList.remove('hidden'); else alert.classList.add('hidden');
+    const alertText = document.getElementById('alert-detraccion-text');
+    if (alert && alertText) {
+      if (serv?.detrae && monto > serv.detraccion) {
+        alertText.textContent = `Monto supera el umbral de S/ ${Number(serv.detraccion).toLocaleString()}. Se requiere sustento de depósito.`;
+        alert.classList.remove('hidden');
+      } else {
+        alert.classList.add('hidden');
+      }
     }
-  });
+  };
+  document.getElementById('input-monto')?.addEventListener('input', actualizarDetraccion);
+  document.getElementById('input-servicio')?.addEventListener('change', actualizarDetraccion);
 
   // Botón Nueva Solicitud
   document.getElementById('btn-nueva-solicitud')?.addEventListener('click', () => abrirModalSolicitud(null));
@@ -1396,6 +1494,42 @@ function setupEventListeners() {
   document.getElementById('btn-add-banco')?.addEventListener('click', () => openModal('modal-banco'));
   document.getElementById('btn-cancel-banco')?.addEventListener('click', () => closeModal('modal-banco'));
 
+  // Toggle detrae → mostrar/ocultar campo umbral
+  document.getElementById('serv-detrae')?.addEventListener('change', () => {
+    const checked = (document.getElementById('serv-detrae') as HTMLInputElement).checked;
+    const fields = document.getElementById('serv-detracion-fields');
+    if (fields) fields.style.opacity = checked ? '1' : '0.3';
+  });
+
+  // Form Servicio
+  document.getElementById('form-servicio')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = (e.target as HTMLFormElement).querySelector('button[type="submit"]') as HTMLButtonElement;
+    btn.disabled = true; btn.textContent = 'Guardando...';
+    const detrae = (document.getElementById('serv-detrae') as HTMLInputElement).checked;
+    const datos = {
+      nombre: (document.getElementById('serv-nombre') as HTMLInputElement).value.trim(),
+      detrae,
+      detraccion: detrae ? parseInt((document.getElementById('serv-detraccion') as HTMLInputElement).value) || 0 : 0,
+    };
+    try {
+      const form = document.getElementById('form-servicio') as HTMLFormElement;
+      const editing = form.getAttribute('data-editing');
+      const res = editing
+        ? await window.electronAPI.db.actualizarServicio(editing, datos)
+        : await window.electronAPI.db.crearServicio(datos);
+      if (res.success) {
+        closeModal('modal-servicio');
+        form.reset();
+        form.removeAttribute('data-editing');
+        await cargarServicios();
+      } else { toast('Error: ' + res.error, 'error'); }
+    } catch (err: any) { toast('Error: ' + err.message, 'error'); }
+    finally { btn.disabled = false; btn.textContent = 'Guardar'; }
+  });
+  document.getElementById('btn-add-servicio')?.addEventListener('click', () => openModal('modal-servicio'));
+  document.getElementById('btn-cancel-servicio')?.addEventListener('click', () => closeModal('modal-servicio'));
+
   // Form Sede
   document.getElementById('form-sede')?.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -1451,7 +1585,7 @@ function setupEventListeners() {
 
 // --- TABLE SEARCH ---
 function setupTableSearches() {
-  const searchIds = ['mis-solicitudes', 'cfo-bandeja', 'bancarizados', 'proveedores', 'bancos', 'sedes', 'usuarios'];
+  const searchIds = ['mis-solicitudes', 'cfo-bandeja', 'bancarizados', 'proveedores', 'bancos', 'servicios', 'sedes', 'usuarios'];
   searchIds.forEach(section => {
     const input = document.getElementById(`search-${section}`) as HTMLInputElement;
     const tbody = document.getElementById(`table-body-${section}`);

@@ -90,6 +90,10 @@
                     <i data-lucide="landmark" class="w-[18px] h-[18px] mr-3 shrink-0"></i>
                     <span class="truncate">Bancos</span>
                 </div>
+                <div data-target="view-servicios" class="nav-link nav-link-inactive hidden" id="nav-servicios">
+                    <i data-lucide="briefcase" class="w-[18px] h-[18px] mr-3 shrink-0"></i>
+                    <span class="truncate">Servicios</span>
+                </div>
                 <div data-target="view-sedes" class="nav-link nav-link-inactive hidden" id="nav-sedes">
                     <i data-lucide="building" class="w-[18px] h-[18px] mr-3 shrink-0"></i>
                     <span class="truncate">Sedes</span>
@@ -187,13 +191,14 @@
                     <div id="dashboard-recientes-table" class="hidden">
                         <table class="w-full text-left text-sm text-slate-300 table-alternate table-fixed">
                             <colgroup>
-                                <col style="width:18%">
-                                <col style="width:44%">
+                                <col style="width:14%">
                                 <col style="width:20%">
-                                <col style="width:18%">
+                                <col style="width:36%">
+                                <col style="width:16%">
+                                <col style="width:14%">
                             </colgroup>
                             <thead class="text-xs uppercase bg-black/20 text-slate-400 font-bold tracking-wider">
-                                <tr><th class="px-8 py-4">Fecha</th><th class="px-8 py-4">Proveedor</th><th class="px-8 py-4">Monto</th><th class="px-8 py-4">Estado</th></tr>
+                                <tr><th class="px-8 py-4">Fecha</th><th class="px-8 py-4">Servicio</th><th class="px-8 py-4">Proveedor</th><th class="px-8 py-4">Monto</th><th class="px-8 py-4">Estado</th></tr>
                             </thead>
                             <tbody id="dashboard-recientes-body" class="divide-y divide-white/5"></tbody>
                         </table>
@@ -213,16 +218,18 @@
                 <div class="flex-1 overflow-auto">
                     <table class="w-full text-left text-sm text-slate-300 table-alternate table-fixed">
                         <colgroup>
+                            <col style="width:10%">
+                            <col style="width:15%">
+                            <col style="width:20%">
                             <col style="width:11%">
-                            <col style="width:27%">
-                            <col style="width:13%">
-                            <col style="width:12%">
-                            <col style="width:25%">
+                            <col style="width:10%">
+                            <col style="width:22%">
                             <col style="width:12%">
                         </colgroup>
                         <thead class="text-xs uppercase bg-neutral-950 text-slate-400 font-bold tracking-wider sticky top-0 z-10">
                             <tr>
                                 <th class="px-8 py-4">Fecha</th>
+                                <th class="px-8 py-4">Servicio</th>
                                 <th class="px-8 py-4">Proveedor</th>
                                 <th class="px-8 py-4">Monto</th>
                                 <th class="px-8 py-4">Estado</th>
@@ -244,17 +251,19 @@
                 <div class="flex-1 overflow-auto">
                     <table class="w-full text-left text-sm text-slate-300 table-alternate table-fixed">
                         <colgroup>
-                            <col style="width:10%">
-                            <col style="width:16%">
-                            <col style="width:22%">
+                            <col style="width:9%">
                             <col style="width:13%">
+                            <col style="width:14%">
+                            <col style="width:18%">
                             <col style="width:11%">
-                            <col style="width:16%">
-                            <col style="width:12%">
+                            <col style="width:10%">
+                            <col style="width:14%">
+                            <col style="width:11%">
                         </colgroup>
                         <thead class="text-xs uppercase bg-neutral-950 text-slate-400 font-bold tracking-wider sticky top-0 z-10">
                             <tr>
                                 <th class="px-8 py-4">Fecha</th>
+                                <th class="px-8 py-4">Servicio</th>
                                 <th class="px-8 py-4">Solicitante</th>
                                 <th class="px-8 py-4">Proveedor</th>
                                 <th class="px-8 py-4">Monto</th>
@@ -277,17 +286,19 @@
                 <div class="flex-1 overflow-auto">
                     <table class="w-full text-left text-sm text-slate-300 table-alternate table-fixed">
                         <colgroup>
+                            <col style="width:9%">
+                            <col style="width:14%">
+                            <col style="width:15%">
+                            <col style="width:20%">
                             <col style="width:11%">
-                            <col style="width:18%">
-                            <col style="width:24%">
-                            <col style="width:13%">
-                            <col style="width:16%">
                             <col style="width:14%">
                             <col style="width:12%">
+                            <col style="width:11%">
                         </colgroup>
                         <thead class="text-xs uppercase bg-neutral-950 text-slate-400 font-bold tracking-wider sticky top-0 z-10">
                             <tr>
                                 <th class="px-8 py-4">Fecha</th>
+                                <th class="px-8 py-4">Servicio</th>
                                 <th class="px-8 py-4">Solicitante</th>
                                 <th class="px-8 py-4">Proveedor</th>
                                 <th class="px-8 py-4">Monto</th>
@@ -359,6 +370,35 @@
                 </div>
             </section>
 
+            <!-- VISTA: SERVICIOS -->
+            <section id="view-servicios"
+                class="flex-1 flex flex-col overflow-hidden hidden animate-in fade-in duration-500 mica-section">
+                <div class="flex items-center gap-3 px-8 py-3 border-b border-fluent-border bg-black/10 backdrop-blur-xl shrink-0">
+                    <input type="text" id="search-servicios" placeholder="Buscar servicios..." class="fluent-input text-xs flex-1 min-w-0">
+                    <button id="btn-add-servicio"
+                        class="text-xs font-bold uppercase tracking-wider bg-fluent-accent text-slate-950 px-4 py-2 rounded-lg hover:bg-[#80d8ff] transition-colors shrink-0 whitespace-nowrap">Añadir</button>
+                </div>
+                <div class="flex-1 overflow-auto">
+                    <table class="w-full text-left text-sm text-slate-300 table-alternate table-fixed">
+                        <colgroup>
+                            <col style="width:30%">
+                            <col style="width:20%">
+                            <col style="width:30%">
+                            <col style="width:20%">
+                        </colgroup>
+                        <thead class="text-xs uppercase bg-neutral-950 text-slate-400 font-bold tracking-wider sticky top-0 z-10">
+                            <tr>
+                                <th class="px-8 py-4">Nombre</th>
+                                <th class="px-8 py-4">Detrae</th>
+                                <th class="px-8 py-4">Umbral (S/)</th>
+                                <th class="px-8 py-4 text-right">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-body-servicios" class="divide-y divide-white/5"></tbody>
+                    </table>
+                </div>
+            </section>
+
             <!-- VISTA: SEDES -->
             <section id="view-sedes"
                 class="flex-1 flex flex-col overflow-hidden hidden animate-in fade-in duration-500 mica-section">
@@ -420,6 +460,12 @@
         <div class="fluent-card w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto modal-content">
             <h3 class="fluent-title mb-4" id="modal-solicitud-title">Nueva Solicitud</h3>
             <form id="form-solicitud" class="space-y-4">
+                <div class="space-y-1">
+                    <label class="fluent-label">Servicio</label>
+                    <select id="input-servicio" class="fluent-input" required>
+                        <option value="" disabled selected>Seleccione un servicio...</option>
+                    </select>
+                </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div class="space-y-1">
                         <label class="fluent-label">Proveedor</label>
@@ -440,7 +486,7 @@
                     <i data-lucide="bell" class="w-5 h-5 text-amber-500 mr-3 mt-0.5"></i>
                     <div>
                         <p class="text-xs font-black uppercase tracking-wider">Sujeto a Detracción</p>
-                        <p class="text-xs mt-0.5 opacity-90">Monto > S/ 700.00. Se requiere sustento de depósito.</p>
+                        <p class="text-xs mt-0.5 opacity-90" id="alert-detraccion-text">Monto supera el umbral. Se requiere sustento de depósito.</p>
                     </div>
                 </div>
                 <div class="space-y-1">
@@ -541,6 +587,36 @@
                 </div>
                 <div class="flex justify-end space-x-3 pt-4">
                     <button type="button" id="btn-cancel-banco" class="px-4 py-2 text-sm font-bold text-slate-300 hover:text-white transition-colors">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 text-sm font-bold bg-fluent-accent text-slate-950 rounded-lg hover:bg-[#80d8ff] transition-colors">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: SERVICIO -->
+    <div id="modal-servicio"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm hidden modal-overlay">
+        <div class="fluent-card w-full max-w-sm p-6 modal-content">
+            <h3 class="fluent-title mb-4">Añadir Servicio</h3>
+            <form id="form-servicio" class="space-y-4">
+                <div class="space-y-1">
+                    <label class="fluent-label">Nombre del Servicio <span class="text-red-400">*</span></label>
+                    <input type="text" id="serv-nombre" class="fluent-input" required>
+                </div>
+                <div class="flex items-center gap-3 py-2">
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="serv-detrae" class="sr-only peer">
+                        <div class="w-9 h-5 bg-white/10 rounded-full peer peer-checked:bg-fluent-accent transition-colors after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-4"></div>
+                    </label>
+                    <label for="serv-detrae" class="text-xs font-bold text-slate-300 uppercase tracking-wider cursor-pointer">Tiene detracción</label>
+                </div>
+                <div id="serv-detracion-fields" class="space-y-1">
+                    <label class="fluent-label">Umbral de Detracción (S/)</label>
+                    <input type="number" id="serv-detraccion" class="fluent-input" placeholder="0" step="1" min="0">
+                    <p class="text-[10px] text-slate-500 mt-1">Si el monto supera este valor, se requerirá sustento de depósito.</p>
+                </div>
+                <div class="flex justify-end space-x-3 pt-4">
+                    <button type="button" id="btn-cancel-servicio" class="px-4 py-2 text-sm font-bold text-slate-300 hover:text-white transition-colors">Cancelar</button>
                     <button type="submit" class="px-4 py-2 text-sm font-bold bg-fluent-accent text-slate-950 rounded-lg hover:bg-[#80d8ff] transition-colors">Guardar</button>
                 </div>
             </form>
@@ -686,9 +762,15 @@
                 </div>
                 <div class="grid grid-cols-2 gap-5">
                     <div class="space-y-1">
+                        <label class="fluent-label text-[10px]">SERVICIO</label>
+                        <p id="detalle-servicio" class="text-sm font-bold text-white">—</p>
+                    </div>
+                    <div class="space-y-1">
                         <label class="fluent-label text-[10px]">SOLICITANTE</label>
                         <p id="detalle-solicitante" class="text-sm font-bold text-white">—</p>
                     </div>
+                </div>
+                <div class="grid grid-cols-2 gap-5">
                     <div class="space-y-1">
                         <label class="fluent-label text-[10px]">PROVEEDOR</label>
                         <p id="detalle-proveedor" class="text-sm font-bold text-white">—</p>
