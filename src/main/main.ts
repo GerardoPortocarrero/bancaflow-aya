@@ -808,17 +808,19 @@ ipcMain.handle('db:observar-solicitud', async (_event, { id, motivo }) => {
   }
 });
 
-ipcMain.handle('db:bancarizar-solicitud', async (_event, { id, evidencias }) => {
+ipcMain.handle('db:bancarizar-solicitud', async (_event, { id, evidencias, bancoId }) => {
   if (!supabaseAdmin) return { success: false, error: 'Base de datos no disponible.' };
   try {
     const userId = await getCurrentUserId();
+    const updateData: any = {
+      estado: 'BANCARIZADO',
+      evidencias_bancarizacion: evidencias,
+      bancarizado_por: userId
+    };
+    if (bancoId) updateData.banco_id = bancoId;
     const { data, error } = await supabaseAdmin
       .from('solicitudes')
-      .update({
-        estado: 'BANCARIZADO',
-        evidencias_bancarizacion: evidencias,
-        bancarizado_por: userId
-      })
+      .update(updateData)
       .eq('id', id)
       .select()
       .single();

@@ -715,6 +715,12 @@
             <form id="form-bancarizar" class="space-y-4">
                 <p class="text-sm text-slate-300">Adjunte las evidencias de la bancarización (comprobante, voucher, etc.)</p>
                 <div class="space-y-1">
+                    <label class="fluent-label">Banco para el pago *</label>
+                    <select id="bancarizar-banco-id" class="fluent-input" required>
+                        <option value="" disabled selected>Seleccione un banco...</option>
+                    </select>
+                </div>
+                <div class="space-y-1">
                     <label class="fluent-label">Evidencias</label>
                     <div id="dropzone-bancarizar" class="fluent-dropzone">
                         <input type="file" id="file-input-bancarizar" class="hidden" accept=".pdf,.png,.jpg,.jpeg,.webp" multiple>
@@ -804,6 +810,10 @@
                 <div class="space-y-1">
                     <label class="fluent-label text-[10px]">SUSTENTOS</label>
                     <div id="detalle-sustentos" class="text-sm text-slate-400">—</div>
+                </div>
+                <div id="detalle-banco-wrapper" class="hidden space-y-1">
+                    <label class="fluent-label text-[10px]">BANCO DE PAGO</label>
+                    <p id="detalle-banco" class="text-sm font-bold text-emerald-400">—</p>
                 </div>
                 <div id="detalle-evidencias-wrapper" class="hidden space-y-1">
                     <label class="fluent-label text-[10px]">EVIDENCIAS DE BANCARIZACIÓN</label>

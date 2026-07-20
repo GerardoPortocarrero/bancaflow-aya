@@ -47,6 +47,7 @@ CREATE TABLE IF NOT EXISTS public.solicitudes (
     -- Estados reales del sistema: PENDIENTE, OBSERVADO, BANCARIZADO
     estado TEXT NOT NULL DEFAULT 'PENDIENTE' CHECK (estado IN ('PENDIENTE', 'OBSERVADO', 'BANCARIZADO')),
     observacion_motivo TEXT,
+    banco_id UUID REFERENCES public.bancos(id),
     evidencias_bancarizacion JSONB DEFAULT '[]'::jsonb,
     bancarizado_por UUID REFERENCES auth.users(id),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,

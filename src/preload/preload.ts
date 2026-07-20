@@ -39,7 +39,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     crearSolicitud: (datos: any) => ipcRenderer.invoke('db:crear-solicitud', datos),
     listarSolicitudes: (vista: string, rol: string) => ipcRenderer.invoke('db:listar-solicitudes', { vista, rol }),
     observarSolicitud: (id: string, motivo: string) => ipcRenderer.invoke('db:observar-solicitud', { id, motivo }),
-    bancarizarSolicitud: (id: string, evidencias: any[]) => ipcRenderer.invoke('db:bancarizar-solicitud', { id, evidencias }),
+    bancarizarSolicitud: (id: string, evidencias: any[], bancoId?: string) => ipcRenderer.invoke('db:bancarizar-solicitud', { id, evidencias, bancoId }),
     actualizarSolicitud: (datos: any) => ipcRenderer.invoke('db:actualizar-solicitud', datos),
     eliminarSolicitud: (id: string) => ipcRenderer.invoke('db:eliminar-solicitud', { id }),
     obtenerSolicitud: (id: string) => ipcRenderer.invoke('db:obtener-solicitud', { id }),

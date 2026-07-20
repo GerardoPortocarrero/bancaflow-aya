@@ -36,7 +36,7 @@ interface IElectronAPI {
     crearSolicitud: (datos: any) => Promise<{ success: boolean; solicitud?: any; error?: string }>;
     listarSolicitudes: (vista: string, rol: string) => Promise<{ success: boolean; solicitudes?: any[]; error?: string }>;
     observarSolicitud: (id: string, motivo: string) => Promise<{ success: boolean; solicitud?: any; error?: string }>;
-    bancarizarSolicitud: (id: string, evidencias: any[]) => Promise<{ success: boolean; solicitud?: any; error?: string }>;
+    bancarizarSolicitud: (id: string, evidencias: any[], bancoId?: string) => Promise<{ success: boolean; solicitud?: any; error?: string }>;
     actualizarSolicitud: (datos: any) => Promise<{ success: boolean; solicitud?: any; error?: string }>;
     eliminarSolicitud: (id: string) => Promise<{ success: boolean; error?: string }>;
     obtenerSolicitud: (id: string) => Promise<{ success: boolean; solicitud?: any; error?: string }>;
@@ -775,6 +775,21 @@ function abrirModalBancarizar(id: string | null) {
   document.getElementById('file-list-bancarizar')!.innerHTML = '';
   document.getElementById('submit-error-bancarizar')?.classList.add('hidden');
   document.getElementById('upload-progress-bancarizar')?.classList.add('hidden');
+  // Poblar select de bancos
+  const bancoSelect = document.getElementById('bancarizar-banco-id') as HTMLSelectElement;
+  if (bancoSelect) {
+    bancoSelect.innerHTML = '<option value="" disabled selected>Seleccione un banco...</option>';
+    window.electronAPI.db.listarBancos().then(res => {
+      if (res.success) {
+        (res.bancos || []).forEach((b: any) => {
+          const opt = document.createElement('option');
+          opt.value = b.id;
+          opt.textContent = `${b.nombre} — ${b.moneda}`;
+          bancoSelect.appendChild(opt);
+        });
+      }
+    });
+  }
   openModal('modal-bancarizar');
 }
 
@@ -815,6 +830,19 @@ async function abrirModalDetalle(id: string) {
   const sustEl = document.getElementById('detalle-sustentos');
   if (sustEl) sustEl.innerHTML = renderArchivos(s.archivos) || '—';
 
+  // Banco de pago
+  const bancoW = document.getElementById('detalle-banco-wrapper');
+  const bancoEl = document.getElementById('detalle-banco');
+  if (s.banco_id) {
+    getBancoMap().then(m => {
+      const banco = m.get(s.banco_id);
+      if (bancoEl) bancoEl.textContent = banco ? `${banco.nombre} — ${banco.moneda}` : '—';
+    });
+    if (bancoW) bancoW.classList.remove('hidden');
+  } else {
+    if (bancoW) bancoW.classList.add('hidden');
+  }
+
   // Evidencias
   const evW = document.getElementById('detalle-evidencias-wrapper');
   const evEl = document.getElementById('detalle-evidencias');
@@ -838,6 +866,8 @@ async function submitBancarizar(e: Event) {
   const btn = (e.target as HTMLFormElement).querySelector('button[type="submit"]') as HTMLButtonElement;
 
   if (!bancarizarSolicitudId) return;
+  const bancoId = (document.getElementById('bancarizar-banco-id') as HTMLSelectElement).value;
+  if (!bancoId) { toast('Seleccione un banco para el pago', 'error'); return; }
   if (bancarizarFiles.length === 0) { toast('Adjunta al menos una evidencia', 'error'); return; }
 
   errorDiv?.classList.add('hidden');
@@ -870,7 +900,7 @@ async function submitBancarizar(e: Event) {
     }
 
     if (progressText) progressText.textContent = 'Bancarizando...';
-    const res = await window.electronAPI.db.bancarizarSolicitud(bancarizarSolicitudId, evidenciasSubidas);
+    const res = await window.electronAPI.db.bancarizarSolicitud(bancarizarSolicitudId, evidenciasSubidas, bancoId);
     if (!res.success) throw new Error(res.error || 'Error al bancarizar');
 
     closeModal('modal-bancarizar');
