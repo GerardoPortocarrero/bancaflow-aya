@@ -358,12 +358,13 @@
                 <div class="flex-1 overflow-auto">
                     <table class="w-full text-left text-sm text-slate-300 table-alternate table-fixed">
                         <colgroup>
-                            <col style="width:44%">
-                            <col style="width:28%">
-                            <col style="width:28%">
+                            <col style="width:30%">
+                            <col style="width:18%">
+                            <col style="width:30%">
+                            <col style="width:22%">
                         </colgroup>
                         <thead class="text-xs uppercase bg-neutral-950 text-slate-400 font-bold tracking-wider sticky top-0 z-10">
-                            <tr><th class="px-8 py-4">Nombre</th><th class="px-8 py-4">Moneda</th><th class="px-8 py-4 text-right">Acción</th></tr>
+                            <tr><th class="px-8 py-4">Nombre</th><th class="px-8 py-4">Moneda</th><th class="px-8 py-4">Sede</th><th class="px-8 py-4 text-right">Acción</th></tr>
                         </thead>
                         <tbody id="table-body-bancos" class="divide-y divide-white/5"></tbody>
                     </table>
@@ -583,6 +584,12 @@
                     <select id="banco-moneda" class="fluent-input" required>
                         <option value="Soles">Soles</option>
                         <option value="Dolares">Dólares</option>
+                    </select>
+                </div>
+                <div class="space-y-1">
+                    <label class="fluent-label">Sede <span class="text-red-400">*</span></label>
+                    <select id="banco-sede-id" class="fluent-input" required>
+                        <option value="" disabled selected>Seleccione sede...</option>
                     </select>
                 </div>
                 <div class="flex justify-end space-x-3 pt-4">

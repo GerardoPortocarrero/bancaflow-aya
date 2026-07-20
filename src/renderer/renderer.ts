@@ -24,7 +24,7 @@ interface IElectronAPI {
   };
   db: {
     listarBancos: () => Promise<{ success: boolean; bancos?: any[]; error?: string }>;
-    crearBanco: (nombre: string, moneda: string) => Promise<{ success: boolean; banco?: any; error?: string }>;
+    crearBanco: (nombre: string, moneda: string, sedeId: string) => Promise<{ success: boolean; banco?: any; error?: string }>;
     listarSedes: () => Promise<{ success: boolean; sedes?: any[]; error?: string }>;
     crearSede: (nombre: string) => Promise<{ success: boolean; sede?: any; error?: string }>;
     listarProveedores: () => Promise<{ success: boolean; proveedores?: any[]; error?: string }>;
@@ -40,7 +40,7 @@ interface IElectronAPI {
     actualizarSolicitud: (datos: any) => Promise<{ success: boolean; solicitud?: any; error?: string }>;
     eliminarSolicitud: (id: string) => Promise<{ success: boolean; error?: string }>;
     obtenerSolicitud: (id: string) => Promise<{ success: boolean; solicitud?: any; error?: string }>;
-    actualizarBanco: (id: string, nombre: string, moneda: string) => Promise<{ success: boolean; banco?: any; error?: string }>;
+    actualizarBanco: (id: string, nombre: string, moneda: string, sedeId: string) => Promise<{ success: boolean; banco?: any; error?: string }>;
     eliminarBanco: (id: string) => Promise<{ success: boolean; error?: string }>;
     actualizarSede: (id: string, nombre: string) => Promise<{ success: boolean; sede?: any; error?: string }>;
     eliminarSede: (id: string) => Promise<{ success: boolean; error?: string }>;
@@ -947,7 +947,7 @@ async function cargarServiciosSelect(res?: any) {
   if (select && res.success) {
     select.innerHTML = '<option value="" disabled selected>Seleccione un servicio...</option>' +
       (res.servicios || []).map((s: any) =>
-        `<option value="${s.id}">${s.nombre}${s.detrae ? ` (S/ ${Number(s.detraccion).toLocaleString()})` : ' (Sin detracción)'}</option>`
+        `<option value="${s.id}">${s.nombre}</option>`
       ).join('');
   }
 }
@@ -1063,36 +1063,53 @@ async function cargarProveedores() {
 
 // --- BANCOS ---
 async function cargarBancos() {
-  skeletonRows('table-body-bancos', 3);
-  const res = await window.electronAPI.db.listarBancos();
-  const selects = ['prov-banco-id'];
-  selects.forEach(id => {
+  skeletonRows('table-body-bancos', 4);
+  const [res, sedeMap] = await Promise.all([
+    window.electronAPI.db.listarBancos(),
+    getSedeMap(),
+  ]);
+  const selects: { id: string; isSede: boolean }[] = [
+    { id: 'banco-sede-id', isSede: true },
+    { id: 'prov-banco-id', isSede: false },
+  ];
+  selects.forEach(({ id, isSede }) => {
     const sel = document.getElementById(id) as HTMLSelectElement;
-    if (sel && res.success) {
+    if (!sel) return;
+    if (isSede) {
+      sel.innerHTML = '<option value="" disabled selected>Seleccione sede...</option>' +
+        [...sedeMap.values()].map((s: any) => `<option value="${s.id}">${s.nombre}</option>`).join('');
+    } else if (res.success) {
       sel.innerHTML = '<option value="">Seleccione...</option>' +
-        (res.bancos || []).map((b: any) => `<option value="${b.id}">${b.nombre} — ${b.moneda}</option>`).join('');
+        (res.bancos || []).map((b: any) => {
+          const sede = sedeMap.get(b.sede_id);
+          return `<option value="${b.id}">${b.nombre} — ${b.moneda}${sede ? ` (${sede.nombre})` : ''}</option>`;
+        }).join('');
     }
   });
   const tbody = document.getElementById('table-body-bancos');
   if (tbody && res.success) {
-    tbody.innerHTML = (res.bancos || []).map((b: any) =>
-      `<tr class="hover:bg-white/5 transition-colors">
+    tbody.innerHTML = (res.bancos || []).map((b: any) => {
+      const sede = sedeMap.get(b.sede_id);
+      return `<tr class="hover:bg-white/5 transition-colors">
         <td class="px-8 py-4 font-bold text-white">${b.nombre}</td>
         <td class="px-8 py-4">${b.moneda || 'Soles'}</td>
+        <td class="px-8 py-4 text-slate-300">${sede ? sede.nombre : '-'}</td>
         <td class="px-8 py-4 text-right space-x-2">
-          <button class="btn-editar-banco p-1.5 rounded-lg bg-fluent-accent/15 text-fluent-accent hover:bg-fluent-accent/25 transition-colors" data-id="${b.id}" data-nombre="${b.nombre}" data-moneda="${b.moneda || 'Soles'}" title="Editar"><i data-lucide="pencil" class="w-3.5 h-3.5"></i></button>
+          <button class="btn-editar-banco p-1.5 rounded-lg bg-fluent-accent/15 text-fluent-accent hover:bg-fluent-accent/25 transition-colors" data-id="${b.id}" data-nombre="${b.nombre}" data-moneda="${b.moneda || 'Soles'}" data-sede-id="${b.sede_id || ''}" title="Editar"><i data-lucide="pencil" class="w-3.5 h-3.5"></i></button>
           <button class="btn-eliminar-banco p-1.5 rounded-lg bg-red-500/15 text-red-400 hover:bg-red-500/25 transition-colors" data-id="${b.id}" title="Eliminar"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
         </td>
-      </tr>`
-    ).join('');
+      </tr>`;
+    }).join('');
     createIcons();
     tbody.querySelectorAll('.btn-editar-banco').forEach(btn => {
       btn.addEventListener('click', () => {
         const id = btn.getAttribute('data-id');
         const nombre = btn.getAttribute('data-nombre');
         const moneda = btn.getAttribute('data-moneda');
+        const sedeId = btn.getAttribute('data-sede-id');
         (document.getElementById('banco-nombre') as HTMLInputElement).value = nombre || '';
         (document.getElementById('banco-moneda') as HTMLSelectElement).value = moneda || 'Soles';
+        (document.getElementById('banco-sede-id') as HTMLSelectElement).value = sedeId || '';
         (document.getElementById('form-banco') as HTMLFormElement).setAttribute('data-editing', id || '');
         openModal('modal-banco');
       });
@@ -1481,16 +1498,20 @@ function setupEventListeners() {
     const editing = form.getAttribute('data-editing');
     const nombre = (document.getElementById('banco-nombre') as HTMLInputElement).value.trim();
     const moneda = (document.getElementById('banco-moneda') as HTMLSelectElement).value;
+    const sedeId = (document.getElementById('banco-sede-id') as HTMLSelectElement).value;
+    console.log('[DEBUG] form-banco submit', { editing, nombre, moneda, sedeId });
     if (!nombre) return;
+    if (!sedeId) { toast('Debe seleccionar una sede', 'error'); return; }
     const res = editing
-      ? await window.electronAPI.db.actualizarBanco(editing, nombre, moneda)
-      : await window.electronAPI.db.crearBanco(nombre, moneda);
+      ? await window.electronAPI.db.actualizarBanco(editing, nombre, moneda, sedeId)
+      : await window.electronAPI.db.crearBanco(nombre, moneda, sedeId);
+    console.log('[DEBUG] form-banco result', res);
     if (res.success) {
       closeModal('modal-banco');
       form.reset();
       form.removeAttribute('data-editing');
       await Promise.all([cargarBancos(), cargarProveedores()]);
-    } else { toast('Error: ' + res.error, 'error'); }
+    } else { toast('Error: ' + (res.error || 'desconocido'), 'error'); }
   });
   document.getElementById('btn-add-banco')?.addEventListener('click', () => openModal('modal-banco'));
   document.getElementById('btn-cancel-banco')?.addEventListener('click', () => closeModal('modal-banco'));

@@ -19,9 +19,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   db: {
     listarBancos: () => ipcRenderer.invoke('db:listar-bancos'),
-    crearBanco: (nombre: string, moneda: string) => ipcRenderer.invoke('db:crear-banco', { nombre, moneda }),
-    actualizarBanco: (id: string, nombre: string, moneda: string) =>
-      ipcRenderer.invoke('db:actualizar-banco', { id, nombre, moneda }),
+    crearBanco: (nombre: string, moneda: string, sedeId: string) => ipcRenderer.invoke('db:crear-banco', { nombre, moneda, sedeId }),
+    actualizarBanco: (id: string, nombre: string, moneda: string, sedeId: string) =>
+      ipcRenderer.invoke('db:actualizar-banco', { id, nombre, moneda, sedeId }),
     eliminarBanco: (id: string) => ipcRenderer.invoke('db:eliminar-banco', { id }),
     listarSedes: () => ipcRenderer.invoke('db:listar-sedes'),
     crearSede: (nombre: string) => ipcRenderer.invoke('db:crear-sede', { nombre }),

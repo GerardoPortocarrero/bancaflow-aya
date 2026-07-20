@@ -479,10 +479,11 @@ ipcMain.handle('db:listar-bancos', async () => {
   }
 });
 
-ipcMain.handle('db:crear-banco', async (_event, { nombre, moneda }) => {
+ipcMain.handle('db:crear-banco', async (_event, { nombre, moneda, sedeId }) => {
   if (!supabaseAdmin) return { success: false, error: 'Falta SUPABASE_SERVICE_KEY en .env para esta acción.' };
+  if (!sedeId) return { success: false, error: 'Debe seleccionar una sede.' };
   try {
-    const { data, error } = await supabaseAdmin.from('bancos').insert({ nombre, moneda: moneda || 'Soles' }).select().single();
+    const { data, error } = await supabaseAdmin.from('bancos').insert({ nombre, moneda: moneda || 'Soles', sede_id: sedeId }).select().single();
     if (error) return { success: false, error: error.message };
     return { success: true, banco: data };
   } catch (err: any) {
@@ -490,13 +491,17 @@ ipcMain.handle('db:crear-banco', async (_event, { nombre, moneda }) => {
   }
 });
 
-ipcMain.handle('db:actualizar-banco', async (_event, { id, nombre, moneda }) => {
+ipcMain.handle('db:actualizar-banco', async (_event, { id, nombre, moneda, sedeId }) => {
+  console.log('[DEBUG] actualizar-banco received:', { id, nombre, moneda, sedeId });
   if (!supabaseAdmin) return { success: false, error: 'Falta SUPABASE_SERVICE_KEY en .env para esta acción.' };
+  if (!sedeId) return { success: false, error: 'Debe seleccionar una sede.' };
   try {
-    const { data, error } = await supabaseAdmin.from('bancos').update({ nombre, moneda }).eq('id', id).select().single();
+    const { data, error } = await supabaseAdmin.from('bancos').update({ nombre, moneda, sede_id: sedeId }).eq('id', id).select().single();
+    console.log('[DEBUG] actualizar-banco result:', { data, error });
     if (error) return { success: false, error: error.message };
     return { success: true, banco: data };
   } catch (err: any) {
+    console.log('[DEBUG] actualizar-banco exception:', err);
     return { success: false, error: err.message || 'Error al actualizar banco' };
   }
 });
