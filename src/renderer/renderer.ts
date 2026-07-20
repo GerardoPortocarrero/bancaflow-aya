@@ -64,6 +64,27 @@ function initIcons() {
 }
 initIcons();
 
+function debounce<T extends (...args: any[]) => void>(fn: T, ms: number): T {
+  let timer: any;
+  return ((...args: any[]) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn(...args), ms);
+  }) as T;
+}
+
+function setupTableDelegation(tbodyId: string, handlers: Record<string, (el: HTMLElement) => void>) {
+  const tbody = document.getElementById(tbodyId);
+  if (!tbody || tbody.dataset.delegated) return;
+  tbody.dataset.delegated = 'true';
+  tbody.addEventListener('click', (e) => {
+    const btn = (e.target as HTMLElement).closest('[class*="btn-"]') as HTMLElement;
+    if (!btn) return;
+    for (const [cls, handler] of Object.entries(handlers)) {
+      if (btn.classList.contains(cls)) { handler(btn); break; }
+    }
+  });
+}
+
 // --- STATE ---
 let currentUser: any = null;
 let editingSolicitudId: string | null = null;
@@ -331,18 +352,19 @@ function renderNotificaciones() {
     </div>`;
   }).join('');
   createIcons();
-  container.querySelectorAll('.btn-eliminar-notif').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const id = btn.getAttribute('data-id');
-      if (!id) return;
-      const r = await window.electronAPI.db.eliminarNotificacion(id);
+  if (!container.dataset.delegated) {
+    container.dataset.delegated = 'true';
+    container.addEventListener('click', async (e) => {
+      const btn = (e.target as HTMLElement).closest('.btn-eliminar-notif') as HTMLElement;
+      if (!btn || !btn.dataset.id) return;
+      const r = await window.electronAPI.db.eliminarNotificacion(btn.dataset.id);
       if (r.success) {
-        notificaciones = notificaciones.filter(n => n.id !== id);
+        notificaciones = notificaciones.filter(n => n.id !== btn.dataset.id);
         actualizarBadgeNotif();
         renderNotificaciones();
       }
     });
-  });
+  }
 }
 
 function toggleNotifDropdown() {
@@ -476,21 +498,15 @@ async function cargarMisSolicitudes() {
     </tr>
   `).join('');
   createIcons();
-
-  tbody.querySelectorAll('.btn-ver-solicitud').forEach(btn => {
-    btn.addEventListener('click', () => abrirModalDetalle(btn.getAttribute('data-id')!));
-  });
-  tbody.querySelectorAll('.btn-editar-solicitud').forEach(btn => {
-    btn.addEventListener('click', () => abrirModalSolicitud(btn.getAttribute('data-id')));
-  });
-  tbody.querySelectorAll('.btn-eliminar-solicitud').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const id = btn.getAttribute('data-id');
-      if (!id) return;
+  setupTableDelegation('table-body-mis-solicitudes', {
+    'btn-ver-solicitud': (btn) => abrirModalDetalle(btn.dataset.id!),
+    'btn-editar-solicitud': (btn) => abrirModalSolicitud(btn.dataset.id),
+    'btn-eliminar-solicitud': async (btn) => {
+      if (!btn.dataset.id) return;
       if (!await confirmDialog('¿Eliminar esta solicitud?')) return;
-      const r = await window.electronAPI.db.eliminarSolicitud(id);
+      const r = await window.electronAPI.db.eliminarSolicitud(btn.dataset.id);
       if (r.success) { toast('Solicitud eliminada correctamente', 'success'); await Promise.all([cargarMisSolicitudes(), cargarDashboard(), cargarBancarizados()]); } else { toast('Error: ' + r.error, 'error'); }
-    });
+    },
   });
 }
 
@@ -561,25 +577,22 @@ function renderArchivosEditables() {
   });
   container.innerHTML = items.join('');
   createIcons();
-
-  container.querySelectorAll('.btn-del-existente').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const idx = parseInt(btn.getAttribute('data-index') || '0');
-      const removed = archivosExistentes.splice(idx, 1);
-      if (removed[0]?.driveId) {
-        archivosAEliminar.push(removed[0].driveId);
+  if (!container.dataset.delegated) {
+    container.dataset.delegated = 'true';
+    container.addEventListener('click', (e) => {
+      const btn = (e.target as HTMLElement).closest('[class*="btn-"]') as HTMLElement;
+      if (!btn) return;
+      const idx = parseInt(btn.dataset.index || '0');
+      if (btn.classList.contains('btn-del-existente')) {
+        const removed = archivosExistentes.splice(idx, 1);
+        if (removed[0]?.driveId) archivosAEliminar.push(removed[0].driveId);
+        renderArchivosEditables();
+      } else if (btn.classList.contains('btn-remove-file')) {
+        solicitudFiles.splice(idx, 1);
+        renderArchivosEditables();
       }
-      renderArchivosEditables();
     });
-  });
-
-  container.querySelectorAll('.btn-remove-file').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const idx = parseInt(btn.getAttribute('data-index') || '0');
-      solicitudFiles.splice(idx, 1);
-      renderArchivosEditables();
-    });
-  });
+  }
 }
 
 async function submitSolicitud(e: Event) {
@@ -714,15 +727,10 @@ async function cargarBandejaCFO() {
     </tr>
   `).join('');
   createIcons();
-
-  tbody.querySelectorAll('.btn-ver-solicitud').forEach(btn => {
-    btn.addEventListener('click', () => abrirModalDetalle(btn.getAttribute('data-id')!));
-  });
-  tbody.querySelectorAll('.btn-bancarizar').forEach(btn => {
-    btn.addEventListener('click', () => abrirModalBancarizar(btn.getAttribute('data-id')));
-  });
-  tbody.querySelectorAll('.btn-observar').forEach(btn => {
-    btn.addEventListener('click', () => abrirModalObservar(btn.getAttribute('data-id')));
+  setupTableDelegation('table-body-cfo-bandeja', {
+    'btn-ver-solicitud': (btn) => abrirModalDetalle(btn.dataset.id!),
+    'btn-bancarizar': (btn) => abrirModalBancarizar(btn.dataset.id ?? null),
+    'btn-observar': (btn) => abrirModalObservar(btn.dataset.id ?? null),
   });
 }
 
@@ -904,18 +912,15 @@ async function cargarBancarizados() {
       </td>
     </tr>
   `).join('');
-
-  tbody.querySelectorAll('.btn-ver-solicitud').forEach(btn => {
-    btn.addEventListener('click', () => abrirModalDetalle(btn.getAttribute('data-id')!));
-  });
-  tbody.querySelectorAll('.btn-eliminar-bancarizado').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const id = btn.getAttribute('data-id');
-      if (!id) return;
+  createIcons();
+  setupTableDelegation('table-body-bancarizados', {
+    'btn-ver-solicitud': (btn) => abrirModalDetalle(btn.dataset.id!),
+    'btn-eliminar-bancarizado': async (btn) => {
+      if (!btn.dataset.id) return;
       if (!await confirmDialog('¿Eliminar esta solicitud bancarizada? Se moverá a eliminados.')) return;
-      const r = await window.electronAPI.db.eliminarSolicitud(id);
+      const r = await window.electronAPI.db.eliminarSolicitud(btn.dataset.id);
       if (r.success) { toast('Solicitud eliminada', 'success'); await Promise.all([cargarBancarizados(), cargarDashboard()]); } else { toast('Error: ' + r.error, 'error'); }
-    });
+    },
   });
 }
 
@@ -975,28 +980,24 @@ async function cargarServicios() {
       </tr>`
     ).join('');
     createIcons();
-    tbody.querySelectorAll('.btn-editar-servicio').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const id = btn.getAttribute('data-id');
-        const s = (res.servicios || []).find((x: any) => x.id === id);
+    setupTableDelegation('table-body-servicios', {
+      'btn-editar-servicio': (btn) => {
+        const s = (res.servicios || []).find((x: any) => x.id === btn.dataset.id);
         if (!s) return;
         (document.getElementById('serv-nombre') as HTMLInputElement).value = s.nombre || '';
         (document.getElementById('serv-detrae') as HTMLInputElement).checked = s.detrae ?? false;
         const fields = document.getElementById('serv-detracion-fields');
         if (fields) fields.style.opacity = s.detrae ? '1' : '0.3';
         (document.getElementById('serv-detraccion') as HTMLInputElement).value = s.detraccion || '';
-        (document.getElementById('form-servicio') as HTMLFormElement).setAttribute('data-editing', id || '');
+        (document.getElementById('form-servicio') as HTMLFormElement).setAttribute('data-editing', btn.dataset.id || '');
         openModal('modal-servicio');
-      });
-    });
-    tbody.querySelectorAll('.btn-eliminar-servicio').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const id = btn.getAttribute('data-id');
-        if (!id) return;
+      },
+      'btn-eliminar-servicio': async (btn) => {
+        if (!btn.dataset.id) return;
         if (!await confirmDialog('¿Eliminar este servicio?')) return;
-        const r = await window.electronAPI.db.eliminarServicio(id);
+        const r = await window.electronAPI.db.eliminarServicio(btn.dataset.id);
         if (r.success) { toast('Servicio eliminado', 'success'); await cargarServicios(); } else { toast('Error: ' + r.error, 'error'); }
-      });
+      },
     });
   }
 }
@@ -1036,10 +1037,9 @@ async function cargarProveedores() {
       </tr>`;
     }).join('');
     createIcons();
-    tbody.querySelectorAll('.btn-editar-proveedor').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const id = btn.getAttribute('data-id');
-        const p = (res.proveedores || []).find((x: any) => x.id === id);
+    setupTableDelegation('table-body-proveedores', {
+      'btn-editar-proveedor': (btn) => {
+        const p = (res.proveedores || []).find((x: any) => x.id === btn.dataset.id);
         if (!p) return;
         (document.getElementById('prov-nombre') as HTMLInputElement).value = p.nombre_razon_social || '';
         (document.getElementById('prov-correo') as HTMLInputElement).value = p.correo || '';
@@ -1047,18 +1047,15 @@ async function cargarProveedores() {
         (document.getElementById('prov-cuenta') as HTMLInputElement).value = p.numero_cuenta || '';
         (document.getElementById('prov-sede-id') as HTMLSelectElement).value = p.sede_id || '';
         (document.getElementById('prov-cci') as HTMLInputElement).value = p.cci || '';
-        (document.getElementById('form-proveedor') as HTMLFormElement).setAttribute('data-editing', id || '');
+        (document.getElementById('form-proveedor') as HTMLFormElement).setAttribute('data-editing', btn.dataset.id || '');
         openModal('modal-proveedor');
-      });
-    });
-    tbody.querySelectorAll('.btn-eliminar-proveedor').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const id = btn.getAttribute('data-id');
-        if (!id) return;
+      },
+      'btn-eliminar-proveedor': async (btn) => {
+        if (!btn.dataset.id) return;
         if (!await confirmDialog('¿Eliminar este proveedor?')) return;
-        const r = await window.electronAPI.db.eliminarProveedor(id);
+        const r = await window.electronAPI.db.eliminarProveedor(btn.dataset.id);
         if (r.success) { toast('Proveedor eliminado', 'success'); await cargarProveedores(); } else { toast('Error: ' + r.error, 'error'); }
-      });
+      },
     });
   }
 }
@@ -1103,27 +1100,20 @@ async function cargarBancos() {
       </tr>`;
     }).join('');
     createIcons();
-    tbody.querySelectorAll('.btn-editar-banco').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const id = btn.getAttribute('data-id');
-        const nombre = btn.getAttribute('data-nombre');
-        const moneda = btn.getAttribute('data-moneda');
-        const sedeId = btn.getAttribute('data-sede-id');
-        (document.getElementById('banco-nombre') as HTMLInputElement).value = nombre || '';
-        (document.getElementById('banco-moneda') as HTMLSelectElement).value = moneda || 'Soles';
-        (document.getElementById('banco-sede-id') as HTMLSelectElement).value = sedeId || '';
-        (document.getElementById('form-banco') as HTMLFormElement).setAttribute('data-editing', id || '');
+    setupTableDelegation('table-body-bancos', {
+      'btn-editar-banco': (btn) => {
+        (document.getElementById('banco-nombre') as HTMLInputElement).value = btn.dataset.nombre || '';
+        (document.getElementById('banco-moneda') as HTMLSelectElement).value = btn.dataset.moneda || 'Soles';
+        (document.getElementById('banco-sede-id') as HTMLSelectElement).value = btn.dataset.sedeId || '';
+        (document.getElementById('form-banco') as HTMLFormElement).setAttribute('data-editing', btn.dataset.id || '');
         openModal('modal-banco');
-      });
-    });
-    tbody.querySelectorAll('.btn-eliminar-banco').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const id = btn.getAttribute('data-id');
-        if (!id) return;
+      },
+      'btn-eliminar-banco': async (btn) => {
+        if (!btn.dataset.id) return;
         if (!await confirmDialog('¿Eliminar este banco?')) return;
-        const res = await window.electronAPI.db.eliminarBanco(id);
-        if (res.success) { toast('Banco eliminado', 'success'); await cargarBancos(); } else { toast('Error: ' + res.error, 'error'); }
-      });
+        const r = await window.electronAPI.db.eliminarBanco(btn.dataset.id);
+        if (r.success) { toast('Banco eliminado', 'success'); await cargarBancos(); } else { toast('Error: ' + r.error, 'error'); }
+      },
     });
   }
 }
@@ -1152,23 +1142,18 @@ async function cargarSedes() {
       </tr>`
     ).join('');
     createIcons();
-    tbody.querySelectorAll('.btn-editar-sede').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const id = btn.getAttribute('data-id');
-        const nombre = btn.getAttribute('data-nombre');
-        (document.getElementById('sede-nombre') as HTMLInputElement).value = nombre || '';
-        (document.getElementById('form-sede') as HTMLFormElement).setAttribute('data-editing', id || '');
+    setupTableDelegation('table-body-sedes', {
+      'btn-editar-sede': (btn) => {
+        (document.getElementById('sede-nombre') as HTMLInputElement).value = btn.dataset.nombre || '';
+        (document.getElementById('form-sede') as HTMLFormElement).setAttribute('data-editing', btn.dataset.id || '');
         openModal('modal-sede');
-      });
-    });
-    tbody.querySelectorAll('.btn-eliminar-sede').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const id = btn.getAttribute('data-id');
-        if (!id) return;
+      },
+      'btn-eliminar-sede': async (btn) => {
+        if (!btn.dataset.id) return;
         if (!await confirmDialog('¿Eliminar esta sede?')) return;
-        const res = await window.electronAPI.db.eliminarSede(id);
-        if (res.success) { toast('Sede eliminada', 'success'); await cargarSedes(); } else { toast('Error: ' + res.error, 'error'); }
-      });
+        const r = await window.electronAPI.db.eliminarSede(btn.dataset.id);
+        if (r.success) { toast('Sede eliminada', 'success'); await cargarSedes(); } else { toast('Error: ' + r.error, 'error'); }
+      },
     });
   }
 }
@@ -1192,31 +1177,24 @@ async function cargarUsuarios() {
       </tr>
     `).join('');
     createIcons();
-    tbody.querySelectorAll('.btn-editar-usuario').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const id = btn.getAttribute('data-id');
-        const nombre = btn.getAttribute('data-nombre');
-        const apellido = btn.getAttribute('data-apellido');
-        const rol = btn.getAttribute('data-rol');
-        (document.getElementById('usr-nombre') as HTMLInputElement).value = nombre || '';
-        (document.getElementById('usr-apellido') as HTMLInputElement).value = apellido || '';
+    setupTableDelegation('table-body-usuarios', {
+      'btn-editar-usuario': (btn) => {
+        (document.getElementById('usr-nombre') as HTMLInputElement).value = btn.dataset.nombre || '';
+        (document.getElementById('usr-apellido') as HTMLInputElement).value = btn.dataset.apellido || '';
         (document.getElementById('usr-correo') as HTMLInputElement).value = '';
         (document.getElementById('usr-correo') as HTMLInputElement).disabled = true;
         (document.getElementById('usr-contrasena') as HTMLInputElement).value = '';
         (document.getElementById('usr-contrasena') as HTMLInputElement).disabled = true;
-        (document.getElementById('usr-rol') as HTMLSelectElement).value = rol || 'RRHH';
-        (document.getElementById('form-usuario') as HTMLFormElement).setAttribute('data-editing', id || '');
+        (document.getElementById('usr-rol') as HTMLSelectElement).value = btn.dataset.rol || 'RRHH';
+        (document.getElementById('form-usuario') as HTMLFormElement).setAttribute('data-editing', btn.dataset.id || '');
         openModal('modal-usuario');
-      });
-    });
-    tbody.querySelectorAll('.btn-eliminar-usuario').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const id = btn.getAttribute('data-id');
-        if (!id) return;
+      },
+      'btn-eliminar-usuario': async (btn) => {
+        if (!btn.dataset.id) return;
         if (!await confirmDialog('¿Eliminar este usuario? Esta acción no se puede deshacer.', 'Eliminar', true)) return;
-        const r = await window.electronAPI.auth.eliminarUsuario(id);
+        const r = await window.electronAPI.auth.eliminarUsuario(btn.dataset.id);
         if (r.success) { toast('Usuario eliminado', 'success'); await cargarUsuarios(); } else { toast('Error: ' + r.error, 'error'); }
-      });
+      },
     });
   }
 }
@@ -1272,14 +1250,16 @@ function renderFileList(listId: string, files: File[], fileArray: { files: File[
     </div>
   `).join('');
   createIcons();
-
-  list.querySelectorAll('.btn-remove-file').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const idx = parseInt(btn.getAttribute('data-index') || '0');
+  if (!list.dataset.delegated) {
+    list.dataset.delegated = 'true';
+    list.addEventListener('click', (e) => {
+      const btn = (e.target as HTMLElement).closest('.btn-remove-file') as HTMLElement;
+      if (!btn) return;
+      const idx = parseInt(btn.dataset.index || '0');
       fileArray.files.splice(idx, 1);
       renderFileList(listId, fileArray.files, fileArray);
     });
-  });
+  }
 }
 
 function resetAllForms() {
@@ -1506,13 +1486,11 @@ function setupEventListeners() {
     const nombre = (document.getElementById('banco-nombre') as HTMLInputElement).value.trim();
     const moneda = (document.getElementById('banco-moneda') as HTMLSelectElement).value;
     const sedeId = (document.getElementById('banco-sede-id') as HTMLSelectElement).value;
-    console.log('[DEBUG] form-banco submit', { editing, nombre, moneda, sedeId });
     if (!nombre) return;
     if (!sedeId) { toast('Debe seleccionar una sede', 'error'); return; }
     const res = editing
       ? await window.electronAPI.db.actualizarBanco(editing, nombre, moneda, sedeId)
       : await window.electronAPI.db.crearBanco(nombre, moneda, sedeId);
-    console.log('[DEBUG] form-banco result', res);
     if (res.success) {
       closeModal('modal-banco');
       form.reset();
@@ -1619,15 +1597,16 @@ function setupTableSearches() {
     const input = document.getElementById(`search-${section}`) as HTMLInputElement;
     const tbody = document.getElementById(`table-body-${section}`);
     if (!input || !tbody) return;
-    input.addEventListener('input', () => {
+    const buscar = debounce(() => {
       const q = input.value.toLowerCase().trim();
       const rows = tbody.querySelectorAll('tr');
-      rows.forEach(row => {
-        if (q === '') { row.style.display = ''; return; }
-        const text = row.textContent?.toLowerCase() || '';
-        row.style.display = text.includes(q) ? '' : 'none';
-      });
-    });
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        if (q === '') { row.style.display = ''; continue; }
+        row.style.display = (row.textContent?.toLowerCase() || '').includes(q) ? '' : 'none';
+      }
+    }, 120);
+    input.addEventListener('input', buscar);
   });
 }
 
@@ -1652,7 +1631,6 @@ function init() {
   setupTableSearches();
   setupDropzones();
   verificarSesion();
-  console.log('BancaFlow v2 Renderer initialized');
 }
 
 init();
