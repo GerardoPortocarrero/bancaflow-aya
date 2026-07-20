@@ -113,6 +113,7 @@ function aplicarFiltroDeRoles(rol: string) {
     setVis('nav-cfo-bandeja', true);
     setVis('nav-bancarizados', true);
     setVis('nav-proveedores', true);
+    setVis('nav-bancos', true);
     setVis('nav-servicios', true);
   } else if (rol === 'ADMINISTRADOR') {
     setVis('nav-mis-solicitudes', true);
@@ -125,6 +126,7 @@ function aplicarFiltroDeRoles(rol: string) {
   } else if (rol === 'CONTADOR') {
     setVis('nav-mis-solicitudes', true);
     setVis('nav-bancarizados', true);
+    setVis('nav-bancos', true);
     setVis('nav-servicios', true);
   } else {
     setVis('nav-mis-solicitudes', true);
