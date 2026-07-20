@@ -630,6 +630,7 @@ ipcMain.handle('db:listar-servicios', async () => {
     const { data, error } = await supabaseAdmin
       .from('servicios')
       .select('*')
+      .is('deleted_at', null)
       .order('nombre', { ascending: true });
     if (error) return { success: false, error: error.message };
     return { success: true, servicios: data };
