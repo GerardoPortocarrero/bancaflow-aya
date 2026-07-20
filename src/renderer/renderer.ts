@@ -1222,7 +1222,7 @@ async function cargarUsuarios() {
 }
 
 // --- FILE DROP HELPERS ---
-function setupFileDropzone(dropzoneId: string, inputId: string, browseId: string, listId: string, fileArray: { files: File[] }) {
+function setupFileDropzone(dropzoneId: string, inputId: string, browseId: string, listId: string, fileArray: { files: File[] }, onUpdate?: () => void) {
   const dropzone = document.getElementById(dropzoneId);
   const input = document.getElementById(inputId) as HTMLInputElement;
   const browse = document.getElementById(browseId);
@@ -1233,12 +1233,17 @@ function setupFileDropzone(dropzoneId: string, inputId: string, browseId: string
   if (browse) browse.addEventListener('click', () => input.click());
   dropzone.addEventListener('click', (e) => { if ((e.target as HTMLElement) !== browse) input.click(); });
 
+  const updateList = () => {
+    if (onUpdate) onUpdate();
+    else renderFileList(listId, fileArray.files, fileArray);
+  };
+
   input.addEventListener('change', () => {
     if (input.files) {
       for (let i = 0; i < input.files.length; i++) {
         fileArray.files.push(input.files[i]);
       }
-      renderFileList(listId, fileArray.files, fileArray);
+      updateList();
     }
   });
 
@@ -1251,7 +1256,7 @@ function setupFileDropzone(dropzoneId: string, inputId: string, browseId: string
       for (let i = 0; i < e.dataTransfer.files.length; i++) {
         fileArray.files.push(e.dataTransfer.files[i]);
       }
-      renderFileList(listId, fileArray.files, fileArray);
+      updateList();
     }
   });
 }
@@ -1628,7 +1633,7 @@ function setupTableSearches() {
 
 // --- FILE DROPZONES ---
 function setupDropzones() {
-  setupFileDropzone('dropzone-solicitud', 'file-input-solicitud', 'dropzone-browse-solicitud', 'file-list-solicitud', { files: solicitudFiles });
+  setupFileDropzone('dropzone-solicitud', 'file-input-solicitud', 'dropzone-browse-solicitud', 'file-list-solicitud', { files: solicitudFiles }, renderArchivosEditables);
   setupFileDropzone('dropzone-bancarizar', 'file-input-bancarizar', 'dropzone-browse-bancarizar', 'file-list-bancarizar', { files: bancarizarFiles });
 }
 
